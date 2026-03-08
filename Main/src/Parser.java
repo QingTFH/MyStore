@@ -1,9 +1,8 @@
 import element.Factor;
-import element.Term;
-import element.Expr;
+import element.Expression;
 import element.ElementFactory;
-import element.Element;
 
+import java.math.BigInteger;
 import java.util.Objects;
 
 public class Parser {
@@ -13,41 +12,39 @@ public class Parser {
         this.lexer = lexer;
     }
 
-    //1+2*3+x^3
-    public Expr parseExpr() {
-        Expr expr = ElementFactory.newExpr();
+    public Expression parseExpr() {
+        Expression ansExpr = ElementFactory.newExpr(); //ansExpr = 0
         String flag = "+";
-        if (pos(lexer.peek())) { //第一个项前可能会右额外正负号
-            flag = getflag();
+        if (pOs(lexer.peek())) { //第一个项前可能会右额外正负号
+            flag = getFlag();
         }
-        Term term = parseTerm();
-        term = term.mult(P_NFactor(flag));
-        expr.addElement(term);
+        Expression term = pOnFactor(flag).toExpression(); //term = +1 | -1
+        term = Expression.mult(term,parseTerm()); //term = 符号 * parseTerm()
+        ansExpr = Expression.add(ansExpr,term); //ansExpr += term
 
-        while (pos(lexer.peek())) {
-            flag = getflag();
-            term = parseTerm();
-            term = term.mult(P_NFactor(flag));
-            expr.addElement(term);
+        while (pOs(lexer.peek())) { //向后解析
+            term = pOnFactor(getFlag()).toExpression(); //term = +1 | -1
+            term = Expression.mult(term,parseTerm()); // 符号 * parseTerm
+            ansExpr = Expression.add(ansExpr,term);
         }
-        return expr;//此时curToken为右括号后的符号，或终点
+        return ansExpr; //此时curToken为右括号后的符号，或终点
     }
 
-    private Factor P_NFactor(String a) {
-        if (pos(a)) {
-            if (Objects.equals(a, "+")) {
-                return ElementFactory.newFactor("1", 0);
-            } else {
-                return ElementFactory.newFactor("-1", 0);
+    private Factor pOnFactor(String a) { //通过a构筑正负因子
+        if (pOs(a)) {
+            if (Objects.equals(a, "+")) { // +1
+                return ElementFactory.newFactor(BigInteger.ONE);
+            } else { // -1
+                return ElementFactory.newFactor(new BigInteger("-1"));
             }
         }
         throw new IllegalArgumentException("判断正负Factor时出现非法符号" + a);
     }
 
-    private String getflag() {
+    private String getFlag() {
         //判断curToken的符号，后移一个curToken
         String flag;
-        if (pos(lexer.peek())) {
+        if (pOs(lexer.peek())) {
             //第一个因子前可能会右额外正负号
             flag = lexer.peek();
             lexer.next();
@@ -57,71 +54,65 @@ public class Parser {
         }
     }
 
-    private Term parseTerm() {
-        Term term = ElementFactory.newTerm();
+    private Expression parseTerm() {
         String flag = "+";
-        if (pos(lexer.peek())) {
-            //第一个因子前可能会右额外正负号
-            flag = getflag();
+        if (pOs(lexer.peek())) { //第一个因子前可能会右额外正负号
+            flag = getFlag();
         }
-        term = term.mult(P_NFactor(flag));
+        Expression term = pOnFactor(flag).toExpression(); //以正负因子作为初始值 +1 或 -1
         term = multParse(term, parseFactor());
         while (Objects.equals(lexer.peek(), "*")) {
             lexer.next();//curToken = *后面的因子
-            term = multParse(term, parseFactor());//curToken = 因子后面的符号
+            term = multParse(term, parseFactor()); //curToken = 因子后面的符号
         }
         return term;
     }
 
-    private Term multParse(Term term, Element element) { //ans = term * element(^n)
-        Term ans = ElementFactory.newTerm();
+    private Expression multParse(Expression term, Expression factor) { //解析乘：一边解析一边乘
+        //term是项本体，factor是打包后的因子
+        Expression ans;
         if (Objects.equals(lexer.peek(), "^")) { //因子后有指数
             lexer.next(); //curToken = ^后面的数字
-            Factor tmpExp = (Factor) parseFactor();
+            Expression tmpExp = parseFactor();
             int n = tmpExp.toInt(); //指数
             if (n == 0) { //ans = term * 1
-                ans = term.mult(ElementFactory.newFactor("1", 0));
-            } else {
-                ans = term.mult(element);
+                ans = Expression.mult(term,ElementFactory.newFactor(BigInteger.ONE).toExpression());
+            } else { // ans = term * factor ^ n
+                ans = Expression.mult(term,factor);
                 for (int i = 1; i < n; i++) {
-                    ans = ans.mult(element);
+                    ans = Expression.mult(ans,factor);
                 }
             }
         } else {
             //没有指数，直接乘即可
-            ans = term.mult(element);
+            ans = Expression.mult(term,factor);
         }
         return ans;
     }
 
-    private Element parseFactor() { //带符号整数，变量因子，表达式因子
-        String fac = lexer.peek(); //fac = 'x','(',常量因子数字,常量因子符号"+","-"
-        //System.out.println(fac);
-
-        if (!(fac.matches("[+x(\\-]|[0-9]+"))) {
+    private Expression parseFactor() { //带符号整数，变量因子，表达式因子
+        String fac = lexer.peek(); //fac = '字母','(',常量因子数字,常量因子符号"+","-"
+        if (!(fac.matches("[+(\\-]|[a-z0-9]+"))) { //允许读入数字，字母，+,-,(
             throw new IllegalArgumentException("parseFactor时读入非法因子: " + fac);
         }
         lexer.next();
 
         if (Objects.equals(fac, "(")) { //表达式因子
-            Expr tmpExpr = parseExpr();
-            lexer.next();//略过右括号
-            //System.out.println(lexer.peek());
-            //tmpExpr.print();
-            return tmpExpr;
-        } else if (Objects.equals(fac, "x")) { //变元因子
-            return ElementFactory.newFactor("1", 1);
-        } else if (pos(fac)) { //常元因子的符号
-            StringBuilder flag = new StringBuilder(fac);//符号打头
-            flag.append(lexer.peek());//拼接数字
+            Expression expr = parseExpr(); //解析表达式
+            lexer.next(); //略过右括号
+            return expr;
+        } else if (fac.matches("[a-z]+")) { //变元因子
+            return ElementFactory.newFactor(fac).toExpression();
+        } else if (pOs(fac)) { //常量因子的符号
+            String flag = fac + lexer.peek(); //符号拼接数字
             lexer.next();
-            return ElementFactory.newFactor(flag.toString(), 0);
+            return ElementFactory.newFactor(new BigInteger(flag)).toExpression();
         } else { //常元
-            return ElementFactory.newFactor(fac, 0);
+            return ElementFactory.newFactor(new BigInteger(fac)).toExpression();
         }
     }
 
-    private boolean pos(String a) {
+    private boolean pOs(String a) { //positive or negative
         return Objects.equals(a, "+") || Objects.equals(a, "-");
     }
 }

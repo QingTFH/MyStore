@@ -2,12 +2,37 @@ package element;
 
 import java.math.BigInteger;
 
-public class Factor extends Element {
-    public Factor(BigInteger coe, int exp) {
-        this.add(coe, exp);
+public class Factor extends Element { /*
+    x | y | ooNiuBi | +3 | -2 | 003
+    Factor存数值、变元名称()
+*/
+    private final BigInteger coe; //系数
+    private final String varName; //变量名
+
+    public Factor(BigInteger coe, String varName) {
+        this.coe = coe;
+        this.varName = varName;
+    }
+
+    public BigInteger getCoe() {
+        return this.coe;
+    }
+
+    public String getVarName() {
+        return this.varName;
+    }
+
+    public boolean isConst() {
+        return this.varName == null;
     }
 
     public int toInt() {
-        return (this.eles().getOrDefault(0, BigInteger.ZERO).intValueExact());
+        return (this.coe.intValueExact());
+    }
+
+    public Expression toExpression() {
+        Expression expr = new Expression();
+        expr.addFactor(this);
+        return expr;
     }
 }

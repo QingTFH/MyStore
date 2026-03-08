@@ -15,7 +15,7 @@ public class Lexer {
     }
 
     public String peek() { //获取信息
-        return curToken;
+        return curToken == null ? "" : curToken;
     }
 
     private String getNumber() {
@@ -28,13 +28,27 @@ public class Lexer {
         return num.toString();
     }
 
-    public void next() { //只分辨是数字还是符号
+    private String getVarName() {
+        StringBuilder var = new StringBuilder();
+        while (pos < input.length()
+                && Character.isLetter(input.charAt(pos))) {
+            var.append(input.charAt(pos));
+            pos++;
+        }
+        return var.toString();
+    }
+
+    public void next() { //只分辨是数字,变量名还是符号
         if (pos >= input.length()) {
             curToken = null;
             return;
-        } else if (Character.isDigit(input.charAt(pos))) {
+        }
+
+        if (Character.isDigit(input.charAt(pos))) { //数字
             curToken = getNumber();
-        } else {
+        } else if (Character.isLetter(input.charAt(pos))) {  //变量名
+            curToken = getVarName();
+        } else { //符号
             curToken = String.valueOf(input.charAt(pos));
             pos++;
         }
