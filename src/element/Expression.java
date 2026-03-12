@@ -1,5 +1,7 @@
 package element;
 
+import io.Output;
+
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,34 +63,7 @@ public class Expression extends Element { /*
     }
 
     public void print() { //打印
-        //3*x^2 + 5*y^3 + z
-        int flag = 0; //打印次数
-        for (Termkey key : this.keyMap.keySet()) { //该项的元
-            BigInteger coe = this.keyMap.get(key); //该项的系数
-            //打印符号
-            if (coe.compareTo(BigInteger.ZERO) < 0) { //coe<0
-                System.out.print("-");
-            } else if (coe.compareTo(BigInteger.ZERO) > 0 && flag != 0) { //coe>0 且 不是第一项
-                System.out.print("+");
-            }
-
-            //打印系数(绝对值):常数 | 变元且系数不为1
-            if (key.isConst() || (!key.isConst() && !coe.abs().equals(BigInteger.ONE))) {
-                System.out.print(coe.abs());
-            }
-
-            //打印元:
-            if (!key.isConst()) {
-                if (!coe.abs().equals(BigInteger.ONE)) { //系数不为1
-                    System.out.print("*");
-                }
-                System.out.print(key); //自动调用toString
-            }
-            flag++;
-        }
-        if (flag == 0) {
-            System.out.print("0");
-        }
+        Output.printKeyMap(this.keyMap);
     }
 
     @Override
