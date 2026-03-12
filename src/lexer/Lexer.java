@@ -1,3 +1,4 @@
+package lexer;
 
 public class Lexer {
     private int pos = 0;//curToken后一位
@@ -53,4 +54,5 @@ public class Lexer {
             pos++;
         }
     }
+
 }

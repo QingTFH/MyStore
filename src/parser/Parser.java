@@ -1,28 +1,45 @@
+package parser;
+
 import element.Factor;
 import element.Expression;
 import element.ElementFactory;
+import lexer.Lexer;
 
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.Objects;
 
 public class Parser {
-    private final Lexer lexer;
+    private static Parser parser = null;
+    private Lexer lexer;
+    private HashMap<String, Function> funcs = new HashMap<>(); // <函数名 -> 函数体>
 
-    public Parser(Lexer lexer) {
+    private Parser(Lexer lexer) {
+        this.lexer = lexer;
+    }
+
+    public static Parser getParser() {
+        if (parser == null) {
+            parser = new Parser(null);
+        }
+        return parser;
+    }
+
+    public void setLexer (Lexer lexer) {
         this.lexer = lexer;
     }
 
     public Expression parseExpr() {
         Expression ansExpr = ElementFactory.newExpr(); //ansExpr = 0
         String flag = "+";
-        if (pOs(lexer.peek())) { //第一个项前可能会右额外正负号
+        if (isPlusOrSub(lexer.peek())) { //第一个项前可能会右额外正负号
             flag = getFlag();
         }
         Expression term = pOnFactor(flag).toExpression(); //term = +1 | -1
         term = Expression.mult(term,parseTerm()); //term = 符号 * parseTerm()
         ansExpr = Expression.add(ansExpr,term); //ansExpr += term
 
-        while (pOs(lexer.peek())) { //向后解析
+        while (isPlusOrSub(lexer.peek())) { //向后解析
             term = pOnFactor(getFlag()).toExpression(); //term = +1 | -1
             term = Expression.mult(term,parseTerm()); // 符号 * parseTerm
             ansExpr = Expression.add(ansExpr,term);
@@ -31,7 +48,7 @@ public class Parser {
     }
 
     private Factor pOnFactor(String a) { //通过a构筑正负因子
-        if (pOs(a)) {
+        if (isPlusOrSub(a)) {
             if (Objects.equals(a, "+")) { // +1
                 return ElementFactory.newFactor(BigInteger.ONE);
             } else { // -1
@@ -44,7 +61,7 @@ public class Parser {
     private String getFlag() {
         //判断curToken的符号，后移一个curToken
         String flag;
-        if (pOs(lexer.peek())) {
+        if (isPlusOrSub(lexer.peek())) {
             //第一个因子前可能会右额外正负号
             flag = lexer.peek();
             lexer.next();
@@ -56,7 +73,7 @@ public class Parser {
 
     private Expression parseTerm() {
         String flag = "+";
-        if (pOs(lexer.peek())) { //第一个因子前可能会右额外正负号
+        if (isPlusOrSub(lexer.peek())) { //第一个因子前可能会右额外正负号
             flag = getFlag();
         }
         Expression term = pOnFactor(flag).toExpression(); //以正负因子作为初始值 +1 或 -1
@@ -90,29 +107,69 @@ public class Parser {
         return ans;
     }
 
-    private Expression parseFactor() { //带符号整数，变量因子，表达式因子
-        String fac = lexer.peek(); //fac = '字母','(',常量因子数字,常量因子符号"+","-"
-        if (!(fac.matches("[+(\\-]|[a-z0-9]+"))) { //允许读入数字，字母，+,-,(
+    private Expression parseFactor() {
+        //带符号整数，变量因子，表达式因子
+
+        String fac = lexer.peek();
+            //fac = '字母','(',常量因子数字,常量因子符号"+","-"
+
+        if (!(fac.matches("[+(\\[\\-]|[a-z0-9]+"))) {
+            //允许读入数字，字母，+,-,(
             throw new IllegalArgumentException("parseFactor时读入非法因子: " + fac);
         }
-        lexer.next();
+        lexer.next(); //读取下个token
 
-        if (Objects.equals(fac, "(")) { //表达式因子
-            Expression expr = parseExpr(); //解析表达式
-            lexer.next(); //略过右括号
-            return expr;
-        } else if (fac.matches("[a-z]+")) { //变元因子
-            return ElementFactory.newFactor(fac).toExpression();
-        } else if (pOs(fac)) { //常量因子的符号
-            String flag = fac + lexer.peek(); //符号拼接数字
-            lexer.next();
-            return ElementFactory.newFactor(new BigInteger(flag)).toExpression();
-        } else { //常元
-            return ElementFactory.newFactor(new BigInteger(fac)).toExpression();
+        if (Objects.equals(fac, "(")) {
+            //表达式因子
+            return parseExprFactor();
+        } else if (Objects.equals(fac, "[")) {
+            //选择式因子
+            return parseChoose();
+        } else if (fac.matches("[a-z]+")) {
+            //变元因子
+            return parseVarFactor(fac);
+        } else if (isPlusOrSub(fac)) {
+            //常量因子的符号
+            return parseSignWithNumber(fac);
+        } else {
+            //常量因子
+            return parseNumber(fac);
         }
     }
 
-    private boolean pOs(String a) { //positive or negative
+    private Expression parseExprFactor() {
+        Expression expr = parseExpr(); //解析表达式
+        lexer.next(); //略过右括号
+        return expr;
+    }
+
+    private Expression parseVarFactor(String varName) {
+        return ElementFactory.newFactor(varName).toExpression();
+    }
+
+    private Expression parseSignWithNumber(String sign) {
+        String num = lexer.peek(); //当前数字
+        lexer.next(); //掠过当前数字
+        String number = sign + num; //符号拼接数字
+        return ElementFactory.newFactor(new BigInteger(number)).toExpression();
+    }
+
+    private Expression parseNumber(String num) {
+        return ElementFactory.newFactor(new BigInteger(num)).toExpression();
+    }
+
+    private Expression parseChoose() {
+        //解析一个选择式
+        throw new RuntimeException("尚未完工");
+    }
+
+    private boolean isPlusOrSub(String a) { //加号或减号
         return Objects.equals(a, "+") || Objects.equals(a, "-");
     }
+
+    public void parseFuncDef() {
+        //向func中添加当前行的函数定义
+        throw new RuntimeException("尚未完工");
+    }
+
 }
