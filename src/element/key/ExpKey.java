@@ -1,0 +1,35 @@
+package element.key;
+
+import element.Expression;
+
+public class ExpKey implements TermKeyEntry {
+    private final Expression inner; // exp括号内化简后的Expr
+
+    public ExpKey(Expression inner) {
+        this.inner = inner;
+    }
+
+    public Expression getInner() {
+        return inner;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ExpKey)) return false;
+        ExpKey other = (ExpKey) o;
+        // 判断 this.inner - other.inner 是否恒等于0
+        return Expression.subtract(this.inner,other.inner).isZero();
+    }
+
+    @Override
+    public int hashCode() {
+        return inner.hashCode();
+    }
+
+    @Override
+    public String toOutputString(int power) {
+        // power对ExpKey固定为1，幂次已乘入inner
+        return "exp(" + inner.toString() + ")";
+    }
+}

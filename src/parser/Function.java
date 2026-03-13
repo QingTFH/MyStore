@@ -13,9 +13,7 @@ public class Function {
         this.body = body;
     }
 
-    public String getFuncName() { return funcName; }
-
-    public String getParamName() { return paramName; }
-
-    public Expression getBody() { return body; }
+    public Expression apply(Expression arg) {
+        return body.substitute(paramName, arg);
+    }
 }

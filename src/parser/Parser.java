@@ -25,7 +25,7 @@ public class Parser {
         return parser;
     }
 
-    public void setLexer (Lexer lexer) {
+    public void setLexer(Lexer lexer) {
         this.lexer = lexer;
     }
 
@@ -35,19 +35,19 @@ public class Parser {
         if (isPlusOrSub(lexer.peek())) { //第一个项前可能会右额外正负号
             flag = getFlag();
         }
-        Expression term = pOnFactor(flag).toExpression(); //term = +1 | -1
+        Expression term = SignFactor(flag).toExpression(); //term = +1 | -1
         term = Expression.mult(term,parseTerm()); //term = 符号 * parseTerm()
         ansExpr = Expression.add(ansExpr,term); //ansExpr += term
 
         while (isPlusOrSub(lexer.peek())) { //向后解析
-            term = pOnFactor(getFlag()).toExpression(); //term = +1 | -1
+            term = SignFactor(getFlag()).toExpression(); //term = +1 | -1
             term = Expression.mult(term,parseTerm()); // 符号 * parseTerm
             ansExpr = Expression.add(ansExpr,term);
         }
         return ansExpr; //此时curToken为右括号后的符号，或终点
     }
 
-    private Factor pOnFactor(String a) { //通过a构筑正负因子
+    private Factor SignFactor(String a) { //通过a构筑正负因子
         if (isPlusOrSub(a)) {
             if (Objects.equals(a, "+")) { // +1
                 return ElementFactory.newFactor(BigInteger.ONE);
@@ -76,65 +76,55 @@ public class Parser {
         if (isPlusOrSub(lexer.peek())) { //第一个因子前可能会右额外正负号
             flag = getFlag();
         }
-        Expression term = pOnFactor(flag).toExpression(); //以正负因子作为初始值 +1 或 -1
-        term = multParse(term, parseFactor());
+        Expression term = SignFactor(flag).toExpression(); //以正负因子作为初始值 +1 或 -1
+        term = Expression.mult(term, parseFactor());
         while (Objects.equals(lexer.peek(), "*")) {
-            lexer.next();//curToken = *后面的因子
-            term = multParse(term, parseFactor()); //curToken = 因子后面的符号
+            lexer.next(); //curToken = *后面的因子
+            term = Expression.mult(term, parseFactor()); //curToken = 因子后面的符号
         }
         return term;
-    }
-
-    private Expression multParse(Expression term, Expression factor) { //解析乘：一边解析一边乘
-        //term是项本体，factor是打包后的因子
-        Expression ans;
-        if (Objects.equals(lexer.peek(), "^")) { //因子后有指数
-            lexer.next(); //curToken = ^后面的数字
-            Expression tmpExp = parseFactor();
-            int n = tmpExp.toInt(); //指数
-            if (n == 0) { //ans = term * 1
-                ans = Expression.mult(term,ElementFactory.newFactor(BigInteger.ONE).toExpression());
-            } else { // ans = term * factor ^ n
-                ans = Expression.mult(term,factor);
-                for (int i = 1; i < n; i++) {
-                    ans = Expression.mult(ans,factor);
-                }
-            }
-        } else {
-            //没有指数，直接乘即可
-            ans = Expression.mult(term,factor);
-        }
-        return ans;
     }
 
     private Expression parseFactor() {
         //带符号整数，变量因子，表达式因子
 
         String fac = lexer.peek();
-            //fac = '字母','(',常量因子数字,常量因子符号"+","-"
+        //fac = '字母','(',常量因子数字,常量因子符号"+","-"
 
         if (!(fac.matches("[+(\\[\\-]|[a-z0-9]+"))) {
             //允许读入数字，字母，+,-,(
             throw new IllegalArgumentException("parseFactor时读入非法因子: " + fac);
         }
-        lexer.next(); //读取下个token
+        lexer.next(); //curToken = fac后一位
 
+        Expression ans;
         if (Objects.equals(fac, "(")) {
             //表达式因子
-            return parseExprFactor();
+            ans = parseExprFactor();
         } else if (Objects.equals(fac, "[")) {
-            //选择式因子
-            return parseChoose();
+            //选择式因子,curToken = "("
+            ans = parseChoose();
+        } else if ((Objects.equals(fac, "exp"))) {
+            ans = parseExp();
         } else if (fac.matches("[a-z]+")) {
             //变元因子
-            return parseVarFactor(fac);
+            ans = parseVarFactor(fac);
         } else if (isPlusOrSub(fac)) {
             //常量因子的符号
-            return parseSignWithNumber(fac);
-        } else {
+            ans = parseSignWithNumber(fac);
+        }  else {
             //常量因子
-            return parseNumber(fac);
+            ans = parseNumber(fac);
         }
+
+        //这时lexer.peek是Factor后的符号
+        if (Objects.equals(lexer.peek(), "^")) {
+            lexer.next();
+            int n = parseFactor().toInt();
+            return Expression.pow(ans, n);
+        }
+
+        return ans;
     }
 
     private Expression parseExprFactor() {
@@ -159,8 +149,37 @@ public class Parser {
     }
 
     private Expression parseChoose() {
-        //解析一个选择式
-        throw new RuntimeException("尚未完工");
+        // 待解析 (A==B?C:D)]
+        lexer.next(); // 消费 "("，peek是A的第一个token
+        Expression a = parseFactor();
+        // 此时peek是"=="
+        lexer.next(); // 消费 "=="，peek是B的第一个token
+        lexer.next();
+        Expression b = parseFactor();
+        // 此时peek是")"
+        lexer.next(); // 消费 ")"，peek是"?"
+        lexer.next(); // 消费 "?"，peek是C的第一个token
+        Expression c = parseFactor();
+        // 此时peek是":"
+        lexer.next(); // 消费 ":"，peek是D的第一个token
+        Expression d = parseFactor();
+        // 此时peek是"]"
+        lexer.next(); // 消费 "]"
+
+        Expression diff = Expression.subtract(a, b);
+        if (diff.isZero()) {
+            return c;
+        } else {
+            return d;
+        }
+    }
+
+    private Expression parseExp() {
+        //待解析 (A) A是因子
+        lexer.next(); // 消费"("，peek = inner第一个token
+        Expression inner = parseFactor();
+        lexer.next(); // 消费")"
+        return ElementFactory.newExpExpr(inner);
     }
 
     private boolean isPlusOrSub(String a) { //加号或减号
@@ -168,8 +187,15 @@ public class Parser {
     }
 
     public void parseFuncDef() {
-        //向func中添加当前行的函数定义
-        throw new RuntimeException("尚未完工");
+        //已知该行为 "f(x)=Expr",curToken = "f"
+        String funcName = lexer.peek();
+        lexer.next(); // peek = "("
+        lexer.next(); // peek = "x"
+        String varName = lexer.peek();
+        lexer.next(); // peek = ")"
+        lexer.next(); // peek = "="
+        lexer.next(); // peek = Expression第一个token
+        Expression body = parseExpr();
+        funcs.put(funcName, new Function(funcName, varName, body));
     }
-
 }

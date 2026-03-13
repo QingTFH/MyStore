@@ -1,15 +1,15 @@
 package io;
 
-import element.Termkey;
+import element.TermKey;
 
 import java.math.BigInteger;
 import java.util.Map;
 
 public class Output {
 
-    public static void printKeyMap(Map<Termkey, BigInteger> map) {
+    public static void printKeyMap(Map<TermKey, BigInteger> map) {
         int flag = 0; //打印次数
-        for (Termkey key : map.keySet()) { //该项的元
+        for (TermKey key : map.keySet()) { //该项的元
             BigInteger coe = map.get(key); //该项的系数
             //打印符号
             if (coe.compareTo(BigInteger.ZERO) < 0) { //coe<0

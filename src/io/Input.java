@@ -1,6 +1,7 @@
 package io;
 
 import java.util.Scanner;
+
 import lexer.Lexer;
 import parser.Parser;
 
@@ -15,13 +16,11 @@ public class Input {
         Parser parser = Parser.getParser();
         int n = Integer.parseInt(scanner.nextLine());
 
-        for (int i=0;i<n;i++) {
-            //切割成 函数名 = 函数表达式，后者parseExpr
+        for (int i = 0; i < n; i++) { //构建map，<函数名 -> 表达式>
             parser.setLexer(new Lexer(InputLine()));
             parser.parseFuncDef();
-        }//构建map，<函数名 -> 表达式>
+        }
     }
-
 
 
 }
