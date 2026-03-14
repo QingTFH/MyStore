@@ -3,7 +3,7 @@ package element;
 import element.key.ExpKey;
 import element.key.TermKeyEntry;
 import element.key.VarKey;
-import io.Output;
+import factory.ElementFactory;
 
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -22,8 +22,38 @@ public class Expression extends Element { /*
         this.keyMap = new HashMap<>();
     }
 
-    public void print() { //打印
-        Output.printKeyMap(this.keyMap);
+    /*---------对外方法----------*/
+
+    public String toOutString() {
+        int flag = 0; //打印次数
+        StringBuilder sb = new StringBuilder();
+        for (TermKey key : keyMap.keySet()) { //该项的元
+            BigInteger coe = keyMap.get(key); //该项的系数
+            //打印符号
+            if (coe.compareTo(BigInteger.ZERO) < 0) { //coe<0
+                sb.append("-");
+            } else if (coe.compareTo(BigInteger.ZERO) > 0 && flag != 0) { //coe>0 且 不是第一项
+                sb.append("+");
+            }
+
+            //打印系数(绝对值):常数 | 变元且系数不为1
+            if (key.isConst() || (!key.isConst() && !coe.abs().equals(BigInteger.ONE))) {
+                sb.append(coe.abs());
+            }
+
+            //打印元:
+            if (!key.isConst()) {
+                if (!coe.abs().equals(BigInteger.ONE)) { //系数不为1
+                    sb.append("*");
+                }
+                sb.append(key.toOutString());
+            }
+            flag++;
+        }
+        if (flag == 0) {
+            sb.append("0");
+        }
+        return sb.toString();
     }
 
     @Override
@@ -36,27 +66,18 @@ public class Expression extends Element { /*
         if (!coe.equals(BigInteger.ZERO)) {
             Map<TermKeyEntry,Integer> newMap = new HashMap<>(); //factor对应的TermKey的map
             if (!factor.isConst()) { //factor是变元
-                newMap.put(new VarKey(factor.getVarName()),1);
+                newMap.put(ElementFactory.newVarKey(factor.getVarName()),1);
             }
-            TermKey newKey = new TermKey(newMap); //factor的TermKey
+            TermKey newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
             this.mergeTerm(newKey,coe);
         }
     }
 
     public void addExpFactor(Expression inner) {
         Map<TermKeyEntry, Integer> newMap = new HashMap<>();
-        newMap.put(new ExpKey(inner), 1);
-        TermKey newKey = new TermKey(newMap);
+        newMap.put(ElementFactory.newExpKey(inner), 1);
+        TermKey newKey = ElementFactory.newTermKey(newMap);
         mergeTerm(newKey, BigInteger.ONE);
-    }
-
-    private void mergeTerm(TermKey key, BigInteger coe) { //合并key -> coe
-        if (!coe.equals(BigInteger.ZERO)) {
-            this.keyMap.merge(key,coe,BigInteger::add);
-            if (this.keyMap.get(key).equals(BigInteger.ZERO)) {
-                this.keyMap.remove(key);
-            }
-        }
     }
 
     public int toInt() {
@@ -64,12 +85,10 @@ public class Expression extends Element { /*
             return 0;
         }
         if (keyMap.size() != 1) {
-            this.print();
             throw new RuntimeException("表达式中项不唯一，无法转换为int");
         }
         Map.Entry<TermKey, BigInteger> entry = keyMap.entrySet().iterator().next();
         if (!entry.getKey().isConst()) {
-            this.print();
             throw new RuntimeException("表达式是变元项，无法转换为int");
         }
         return entry.getValue().intValueExact();
@@ -99,6 +118,17 @@ public class Expression extends Element { /*
     @Override
     public int hashCode() {
         return keyMap.hashCode();
+    }
+
+    /*---------内部工具----------*/
+
+    private void mergeTerm(TermKey key, BigInteger coe) { //合并key -> coe
+        if (!coe.equals(BigInteger.ZERO)) {
+            this.keyMap.merge(key,coe,BigInteger::add);
+            if (this.keyMap.get(key).equals(BigInteger.ZERO)) {
+                this.keyMap.remove(key);
+            }
+        }
     }
 
     /*---------静态方法----------*/

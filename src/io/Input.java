@@ -12,7 +12,7 @@ public class Input {
         return scanner.nextLine();
     }
 
-    public static void InputMap() {
+    public static void InputFunction() {
         Parser parser = Parser.getParser();
         int n = Integer.parseInt(scanner.nextLine());
 

@@ -25,7 +25,7 @@ public class VarKey implements TermKeyEntry {
     }
 
     @Override
-    public String toOutputString(int power) {
+    public String toOutString(int power) {
         if (power == 0) return "";
         if (power == 1) return "x";
         return "x^" + power;

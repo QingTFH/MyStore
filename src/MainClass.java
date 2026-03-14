@@ -1,13 +1,28 @@
+import element.Expression;
 import io.Input;
+import io.Output;
 import lexer.Lexer;
 import parser.Parser;
 
 public class MainClass {
     public static void main(String[] args) {
+//        if(true) {
+//            test();
+//            return;
+//        }
         Parser parser = Parser.getParser();
-        Input.InputMap();//parser记录函数
-        parser.setLexer(new Lexer(Input.InputLine()));//parser读取待解析表达式
-        parser.parseExpr().print();//解析表达式并输出
+        Input.InputFunction();//parser记录函数
+        parser.setLexer(new Lexer(Input.InputLine())); //parser读取待解析表达式
+        Output.printExpr(parser.parseExpr()); //解析表达式并输出
+    }
+
+    public static void test() {
+        Parser parser = Parser.getParser();
+        parser.setLexer(new Lexer(Input.InputLine())); //parser读取待解析表达式
+        Expression a1 = parser.parseExpr();
+        parser.setLexer(new Lexer(Input.InputLine())); //parser读取待解析表达式
+        Expression a2 = parser.parseExpr();
+        Output.printExpr(a1.substitute("x",a2));
     }
 
 }

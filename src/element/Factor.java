@@ -1,5 +1,7 @@
 package element;
 
+import factory.ElementFactory;
+
 import java.math.BigInteger;
 
 public class Factor extends Element { /*
@@ -31,7 +33,7 @@ public class Factor extends Element { /*
     }
 
     public Expression toExpression() {
-        Expression expr = new Expression();
+        Expression expr = ElementFactory.newExpr();
         expr.addFactor(this);
         return expr;
     }

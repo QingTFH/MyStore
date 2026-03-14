@@ -28,8 +28,8 @@ public class ExpKey implements TermKeyEntry {
     }
 
     @Override
-    public String toOutputString(int power) {
+    public String toOutString(int power) {
         // power对ExpKey固定为1，幂次已乘入inner
-        return "exp(" + inner.toString() + ")";
+        return "exp(" + inner.toOutString() + ")";
     }
 }

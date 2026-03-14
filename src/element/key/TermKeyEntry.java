@@ -7,5 +7,5 @@ public interface TermKeyEntry {
     @Override
     int hashCode();
 
-    String toOutputString(int power);
+    String toOutString(int power);
 }

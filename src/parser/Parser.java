@@ -2,7 +2,7 @@ package parser;
 
 import element.Factor;
 import element.Expression;
-import element.ElementFactory;
+import factory.ElementFactory;
 import lexer.Lexer;
 
 import java.math.BigInteger;
@@ -104,11 +104,18 @@ public class Parser {
         } else if (Objects.equals(fac, "[")) {
             //选择式因子,curToken = "("
             ans = parseChoose();
-        } else if ((Objects.equals(fac, "exp"))) {
-            ans = parseExp();
         } else if (fac.matches("[a-z]+")) {
-            //变元因子
-            ans = parseVarFactor(fac);
+            //一串字母
+            if ((Objects.equals(fac, "f"))) {
+                //函数
+                ans = parseFunction();
+            } else if ((Objects.equals(fac, "exp"))) {
+                //exp
+                ans = parseExp();
+            } else {
+                //变元因子
+                ans = parseVarFactor(fac);
+            }
         } else if (isPlusOrSub(fac)) {
             //常量因子的符号
             ans = parseSignWithNumber(fac);
@@ -180,6 +187,15 @@ public class Parser {
         Expression inner = parseFactor();
         lexer.next(); // 消费")"
         return ElementFactory.newExpExpr(inner);
+    }
+
+    private Expression parseFunction() {
+        // 待解析 (A)
+        lexer.next(); // 消费"("，peek = 实参第一个token
+        Expression arg = parseFactor();
+        lexer.next(); // 消费")"
+        Function f = funcs.get("f");
+        return f.apply(arg);
     }
 
     private boolean isPlusOrSub(String a) { //加号或减号

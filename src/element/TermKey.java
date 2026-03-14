@@ -3,6 +3,7 @@ package element;
 import element.key.ExpKey;
 import element.key.TermKeyEntry;
 import element.key.VarKey;
+import factory.ElementFactory;
 
 import java.math.BigInteger;
 import java.util.Collections;
@@ -20,30 +21,36 @@ public class TermKey { /*
         this.map = Collections.unmodifiableMap(new HashMap<>(map));//先拷贝再不可变化
     }
 
+    /*-----静态方法-----*/
+
     public static TermKey mult(TermKey t1, TermKey t2) {
         //两项的x^m*x^n=x^m+n
         //两项的exp(A)*exp(B)=exp(A+B)
         Map<TermKeyEntry,Integer> ansMap = new HashMap<>(t1.map);
         for (TermKeyEntry key : t2.map.keySet()) {
-            if (key instanceof ExpKey) { // 找ans是否有ExpKey，有则合并inner
-                ExpKey found = findExpKey(ansMap);
+            if (key instanceof ExpKey) {
+                //exp
+                ExpKey found = findExpKey(ansMap); // 找ans是否有ExpKey，有则合并inner;
                 if (found != null) { //ans中有exp
                     ansMap.remove(found); //删除原有的ExpKey
                     Expression newInner = Expression.add(
                             found.getInner(), ((ExpKey) key).getInner()
-                    );
-                    ansMap.put(new ExpKey(newInner), 1); //指数函数处理后次数exponent都为1
+                    );  //newExpKey的inner
+                    if(!newInner.isZero()) {// 不是e^0
+                        ansMap.put(ElementFactory.newExpKey(newInner), 1); //指数函数处理后次数exponent都为1
+                    }
                 } else {
                     ansMap.put(key, 1);
                 }
             } else if(key instanceof VarKey) {
+                //var
                 int exponent = t2.map.get(key);
                 ansMap.merge(key,exponent,Integer::sum);
             } else {
                 throw new IllegalArgumentException("TermKey合并时出错");
             }
         }
-        return new TermKey(ansMap);
+        return ElementFactory.newTermKey(ansMap);
     }
 
     private static ExpKey findExpKey(Map<TermKeyEntry,Integer> ansMap) {
@@ -55,26 +62,6 @@ public class TermKey { /*
             }
         }
         return found;
-    }
-
-    public String toString() {
-        if (map.isEmpty()) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        int flag = 0;
-        for (Map.Entry<TermKeyEntry, Integer> entry : map.entrySet()) {
-            if (flag != 0) {
-                sb.append("*");
-            }
-            sb.append(entry.getKey().toOutputString(entry.getValue()));
-            flag++;
-        }
-        return sb.toString();
-    }
-
-    public boolean isConst() {
-        return this.map.isEmpty();
     }
 
     /*-----接口-----*/
@@ -93,6 +80,8 @@ public class TermKey { /*
     public int hashCode() {
         return Objects.hash(map);
     }
+
+    /*-----对外方法-----*/
 
     public Expression substitute(String varName, Expression arg) {
         //将该TermKey中的元 varName 替换成 arg
@@ -124,4 +113,25 @@ public class TermKey { /*
         }
         return result;
     }
+
+    public String toOutString() {
+        if (map.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (Map.Entry<TermKeyEntry, Integer> entry : map.entrySet()) {
+            if (!isFirst) {
+                sb.append("*");
+            }
+            sb.append(entry.getKey().toOutString(entry.getValue()));
+            isFirst = false;
+        }
+        return sb.toString();
+    }
+
+    public boolean isConst() {
+        return this.map.isEmpty();
+    }
+
 }
