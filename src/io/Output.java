@@ -1,10 +1,6 @@
 package io;
 
 import element.Expression;
-import element.TermKey;
-
-import java.math.BigInteger;
-import java.util.Map;
 
 public class Output {
 

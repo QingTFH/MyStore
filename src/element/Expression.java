@@ -1,8 +1,6 @@
 package element;
 
-import element.key.ExpKey;
 import element.key.TermKeyEntry;
-import element.key.VarKey;
 import factory.ElementFactory;
 
 import java.math.BigInteger;

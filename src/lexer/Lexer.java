@@ -12,7 +12,7 @@ public class Lexer {
     public Lexer(String input) {
         this.input = removeWhitespace(input);
 
-//        System.out.println(this.input);
+        //System.out.println(this.input);
 
         this.next();//初始化,curToken为第一个有效token
     }

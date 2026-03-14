@@ -6,10 +6,6 @@ import parser.Parser;
 
 public class MainClass {
     public static void main(String[] args) {
-//        if(true) {
-//            test();
-//            return;
-//        }
         Parser parser = Parser.getParser();
         Input.InputFunction();//parser记录函数
         parser.setLexer(new Lexer(Input.InputLine())); //parser读取待解析表达式

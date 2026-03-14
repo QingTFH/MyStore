@@ -22,7 +22,6 @@ public class Input {
         }
     }
 
-
 }
 /*
 输入更改：

@@ -15,7 +15,7 @@ public class ElementFactory {
     /*-----Factor类-----*/
 
     public static Factor newFactor(BigInteger coe) { //常元,只有coe
-        return new Factor(coe,null);
+        return new Factor(coe, null);
     }
 
     public static Factor newFactor(String varName) { //变元,只有varName
@@ -30,7 +30,7 @@ public class ElementFactory {
 
     public static Expression newExpExpr(Expression inner) { //封装inner成为exp(inner)
         Expression expr = new Expression();
-        if(inner.isZero()) { // e^0 = 1
+        if (inner.isZero()) { // e^0 = 1
             return newFactor(BigInteger.ONE).toExpression();
         }
         expr.addExpFactor(inner); // e^inner
@@ -39,12 +39,12 @@ public class ElementFactory {
 
     /*-----TermKey类-----*/
 
-    public static TermKey newTermKey(Map<TermKeyEntry,Integer> map) {
+    public static TermKey newTermKey(Map<TermKeyEntry, Integer> map) {
         return new TermKey(map);
     }
 
     public static TermKeyEntry newExpKey(Expression inner) {
-        if(inner.isZero()) {
+        if (inner.isZero()) {
             throw new IllegalArgumentException("创建ExpKey时inner = 0，请降级为VarExp");
         }
         return new ExpKey(inner);

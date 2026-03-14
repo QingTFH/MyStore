@@ -13,8 +13,12 @@ public class VarKey implements TermKeyEntry {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof VarKey)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof VarKey)) {
+            return false;
+        }
         VarKey other = (VarKey) o;
         return name.equals(other.name);
     }
@@ -26,8 +30,12 @@ public class VarKey implements TermKeyEntry {
 
     @Override
     public String toOutString(int power) {
-        if (power == 0) return "";
-        if (power == 1) return "x";
+        if (power == 0) {
+            return "";
+        }
+        if (power == 1) {
+            return "x";
+        }
         return "x^" + power;
     }
 }

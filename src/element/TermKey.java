@@ -15,9 +15,9 @@ public class TermKey { /*
     可以认为是项的变元，记录变量名及其幂次
     x^7 * y^2
 */
-    private final Map<TermKeyEntry,Integer> map; // <变量名 -> 次数>
+    private final Map<TermKeyEntry, Integer> map; // <变量名 -> 次数>
 
-    public TermKey(Map<TermKeyEntry,Integer> map) {
+    public TermKey(Map<TermKeyEntry, Integer> map) {
         this.map = Collections.unmodifiableMap(new HashMap<>(map));//先拷贝再不可变化
     }
 
@@ -26,7 +26,7 @@ public class TermKey { /*
     public static TermKey mult(TermKey t1, TermKey t2) {
         //两项的x^m*x^n=x^m+n
         //两项的exp(A)*exp(B)=exp(A+B)
-        Map<TermKeyEntry,Integer> ansMap = new HashMap<>(t1.map);
+        Map<TermKeyEntry, Integer> ansMap = new HashMap<>(t1.map);
         for (TermKeyEntry key : t2.map.keySet()) {
             if (key instanceof ExpKey) {
                 //exp
@@ -36,16 +36,16 @@ public class TermKey { /*
                     Expression newInner = Expression.add(
                             found.getInner(), ((ExpKey) key).getInner()
                     );  //newExpKey的inner
-                    if(!newInner.isZero()) {// 不是e^0
+                    if (!newInner.isZero()) { // 不是e^0
                         ansMap.put(ElementFactory.newExpKey(newInner), 1); //指数函数处理后次数exponent都为1
                     }
                 } else {
                     ansMap.put(key, 1);
                 }
-            } else if(key instanceof VarKey) {
+            } else if (key instanceof VarKey) {
                 //var
                 int exponent = t2.map.get(key);
-                ansMap.merge(key,exponent,Integer::sum);
+                ansMap.merge(key, exponent, Integer::sum);
             } else {
                 throw new IllegalArgumentException("TermKey合并时出错");
             }
@@ -53,7 +53,7 @@ public class TermKey { /*
         return ElementFactory.newTermKey(ansMap);
     }
 
-    private static ExpKey findExpKey(Map<TermKeyEntry,Integer> ansMap) {
+    private static ExpKey findExpKey(Map<TermKeyEntry, Integer> ansMap) {
         ExpKey found = null;
         for (TermKeyEntry k : ansMap.keySet()) {
             if (k instanceof ExpKey) {
@@ -73,7 +73,7 @@ public class TermKey { /*
         } else if (o == null || getClass() != o.getClass()) { //类不同
             return false;
         }
-        return Objects.equals(map,((TermKey) o).map);   //类相同
+        return Objects.equals(map, ((TermKey) o).map);   //类相同
     }
 
     @Override
@@ -93,7 +93,7 @@ public class TermKey { /*
 
             if (key instanceof VarKey) {
                 //对多项式部分，x^n -> arg^n，
-                if(((VarKey) key).getName().equals(varName)) {
+                if (((VarKey) key).getName().equals(varName)) {
                     result = Expression.mult(result, Expression.pow(arg, power));
                 } else { // 其他变量名的VarKey，原样保留,result *= keep
                     Expression keep;
@@ -101,10 +101,11 @@ public class TermKey { /*
                     keep = Expression.pow(f.toExpression(), power);
                     result = Expression.mult(result, keep);
                 }
-            } else if (key instanceof ExpKey){
+            } else if (key instanceof ExpKey) {
                 // 对ExpKey的inner也需要substitute
                 Expression newExpKey;
-                Expression newInner = ((ExpKey) key).getInner().substitute(varName, arg); //递归处理Exp中的Expr
+                Expression newInner = ((ExpKey) key).getInner().
+                        substitute(varName, arg); //代入exp(inner)中的形参
                 newExpKey = ElementFactory.newExpExpr(newInner);
                 result = Expression.mult(result, newExpKey);
             } else {

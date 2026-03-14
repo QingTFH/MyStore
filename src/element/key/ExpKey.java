@@ -15,11 +15,15 @@ public class ExpKey implements TermKeyEntry {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof ExpKey)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ExpKey)) {
+            return false;
+        }
         ExpKey other = (ExpKey) o;
         // 判断 this.inner - other.inner 是否恒等于0
-        return Expression.subtract(this.inner,other.inner).isZero();
+        return Expression.subtract(this.inner, other.inner).isZero();
     }
 
     @Override

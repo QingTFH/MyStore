@@ -204,10 +204,10 @@ public class Parser {
 
     public void parseFuncDef() {
         //已知该行为 "f(x)=Expr",curToken = "f"
-        String funcName = lexer.peek();
+        final String funcName = lexer.peek();
         lexer.next(); // peek = "("
         lexer.next(); // peek = "x"
-        String varName = lexer.peek();
+        final String varName = lexer.peek();
         lexer.next(); // peek = ")"
         lexer.next(); // peek = "="
         lexer.next(); // peek = Expression第一个token
