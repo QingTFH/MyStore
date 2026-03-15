@@ -34,6 +34,7 @@ public class ExpKey implements TermKeyEntry {
     @Override
     public String toOutString(int power) {
         // power对ExpKey固定为1，幂次已乘入inner
-        return "exp(" + inner.toOutString() + ")";
+        // 优化点2：括号冗余
+        return "exp((" + inner.toOutString() + "))";
     }
 }
