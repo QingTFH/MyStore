@@ -1,6 +1,6 @@
 package element;
 
-import element.key.TermKeyEntry;
+import element.key.Monomial;
 import factory.ElementFactory;
 
 import java.util.HashMap;
@@ -13,7 +13,7 @@ public class Expression extends Element { /*
 
     统一使用Expression做计算，Factor只作提取因子用
 */
-    private final Map<TermKey, Number> keyMap; //< 项特征 -> 系数 >
+    private final Map<TermSign, Number> keyMap; //< 项特征 -> 系数 >
 
     public Expression() {
         this.keyMap = new HashMap<>();
@@ -24,7 +24,7 @@ public class Expression extends Element { /*
     public String toOutString() {
         int flag = 0; //打印次数
         StringBuilder sb = new StringBuilder();
-        for (TermKey key : keyMap.keySet()) { //该项的元
+        for (TermSign key : keyMap.keySet()) { //该项的元
             Number coe = keyMap.get(key); //该项的系数
             Number coeAbs = coe.abs();
             //打印符号
@@ -63,19 +63,19 @@ public class Expression extends Element { /*
     public void addFactor(Factor factor) { //Factor转Expr的入口
         Number coe = factor.getCoe(); //factor的系数
         if (!coe.equal(Number.ZERO)) {
-            Map<TermKeyEntry, Number> newMap = new HashMap<>(); //factor对应的TermKey的map
+            Map<Monomial, Number> newMap = new HashMap<>(); //factor对应的TermKey的map
             if (!factor.isConst()) { //factor是变元
                 newMap.put(ElementFactory.newVarKey(factor.getVarName()), Number.ONE);
             }
-            TermKey newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
+            TermSign newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
             this.mergeTerm(newKey, coe);
         }
     }
 
     public void addExpFactor(Expression inner) {
-        Map<TermKeyEntry, Number> newMap = new HashMap<>();
+        Map<Monomial, Number> newMap = new HashMap<>();
         newMap.put(ElementFactory.newExpKey(inner), Number.ONE);
-        TermKey newKey = ElementFactory.newTermKey(newMap);
+        TermSign newKey = ElementFactory.newTermKey(newMap);
         mergeTerm(newKey, Number.ONE);
     }
 
@@ -86,7 +86,7 @@ public class Expression extends Element { /*
         if (keyMap.size() != 1) {
             throw new RuntimeException("表达式中项不唯一，无法转换为Number");
         }
-        Map.Entry<TermKey, Number> entry = keyMap.entrySet().iterator().next();
+        Map.Entry<TermSign, Number> entry = keyMap.entrySet().iterator().next();
         if (!entry.getKey().isConst()) {
             throw new RuntimeException("表达式是变元项，无法转换为Number");
         }
@@ -96,8 +96,8 @@ public class Expression extends Element { /*
     public Expression substitute(String varName, Expression arg) {
         //将该Expr的元varName 由 arg 代入
         Expression result = new Expression();
-        for (Map.Entry<TermKey, Number> entry : keyMap.entrySet()) {
-            TermKey key = entry.getKey();
+        for (Map.Entry<TermSign, Number> entry : keyMap.entrySet()) {
+            TermSign key = entry.getKey();
             Number coe = entry.getValue();
             // 对这一项的TermKey进行代入
             Expression term = key.substitute(varName, arg);
@@ -121,7 +121,7 @@ public class Expression extends Element { /*
 
     /*---------内部工具----------*/
 
-    private void mergeTerm(TermKey key, Number coe) { //合并<key -> coe>
+    private void mergeTerm(TermSign key, Number coe) { //合并<key -> coe>
         if (!coe.equal(0)) {
             this.keyMap.merge(key, coe, Number::add);
             if (this.keyMap.get(key).equal(0)) {
@@ -149,12 +149,12 @@ public class Expression extends Element { /*
 
     public static Expression mult(Expression m1, Expression m2) {
         Expression ans = new Expression();
-        for (TermKey key1 : m1.keyMap.keySet()) { //key1 = m1的项
+        for (TermSign key1 : m1.keyMap.keySet()) { //key1 = m1的项
             Number coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
-            for (TermKey key2 : m2.keyMap.keySet()) { //key2 = m2的项
+            for (TermSign key2 : m2.keyMap.keySet()) { //key2 = m2的项
                 Number coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
                 Number ansCoe = Number.mult(coe1, coe2); //ansCoe = coe1 * coe2
-                TermKey ansKey = TermKey.mult(key1, key2); //ansKey = key1 * key2
+                TermSign ansKey = TermSign.mult(key1, key2); //ansKey = key1 * key2
                 //ans += ansCoe * ansKey
                 ans.mergeTerm(ansKey, ansCoe);
             }
@@ -164,8 +164,8 @@ public class Expression extends Element { /*
 
     public static Expression pow(Expression base, Number exp) {
         Expression ans = new Expression();
-        Map<TermKeyEntry, Number> newMap = new HashMap<>();
-        ans.mergeTerm(new TermKey(newMap), Number.ONE); // ans = 1
+        Map<Monomial, Number> newMap = new HashMap<>();
+        ans.mergeTerm(new TermSign(newMap), Number.ONE); // ans = 1
         if (exp.equal(0)) {
             return ans;
         }

@@ -2,10 +2,10 @@ package element.key;
 
 import element.Number;
 
-public class VarKey implements TermKeyEntry {
+public class VarMonomial implements Monomial {
     private final String name;
 
-    public VarKey(String name) {
+    public VarMonomial(String name) {
         this.name = name;
     }
 
@@ -18,10 +18,10 @@ public class VarKey implements TermKeyEntry {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof VarKey)) {
+        if (!(o instanceof VarMonomial)) {
             return false;
         }
-        VarKey other = (VarKey) o;
+        VarMonomial other = (VarMonomial) o;
         return name.equals(other.name);
     }
 

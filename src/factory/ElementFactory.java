@@ -3,10 +3,10 @@ package factory;
 import element.Expression;
 import element.Factor;
 import element.Number;
-import element.TermKey;
-import element.key.ExpKey;
-import element.key.TermKeyEntry;
-import element.key.VarKey;
+import element.TermSign;
+import element.key.ExpMonomial;
+import element.key.Monomial;
+import element.key.VarMonomial;
 
 import java.math.BigInteger;
 import java.util.Map;
@@ -48,19 +48,19 @@ public class ElementFactory {
 
     /*-----TermKey类-----*/
 
-    public static TermKey newTermKey(Map<TermKeyEntry, Number> map) {
-        return new TermKey(map);
+    public static TermSign newTermKey(Map<Monomial, Number> map) {
+        return new TermSign(map);
     }
 
-    public static TermKeyEntry newExpKey(Expression inner) {
+    public static Monomial newExpKey(Expression inner) {
         if (inner.isZero()) {
             throw new IllegalArgumentException("创建ExpKey时inner = 0，请降级为VarExp");
         }
-        return new ExpKey(inner);
+        return new ExpMonomial(inner);
     }
 
-    public static TermKeyEntry newVarKey(String varName) {
-        return new VarKey(varName);
+    public static Monomial newVarKey(String varName) {
+        return new VarMonomial(varName);
     }
 
     /*-----Number-----*/

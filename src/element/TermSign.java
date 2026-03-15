@@ -1,8 +1,8 @@
 package element;
 
-import element.key.ExpKey;
-import element.key.TermKeyEntry;
-import element.key.VarKey;
+import element.key.ExpMonomial;
+import element.key.Monomial;
+import element.key.VarMonomial;
 import factory.ElementFactory;
 
 import java.math.BigInteger;
@@ -11,30 +11,32 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class TermKey { /*
-    可以认为是项的变元，记录变量名及其幂次
-    x^7 * y^2
-*/
-    private final Map<TermKeyEntry, Number> map; // <变量名 -> 次数>
+public class TermSign {
+    /*
+    *   项的非系数部分
+    *   x^7 * y^2 * exp(inner)
+    */
 
-    public TermKey(Map<TermKeyEntry, Number> map) {
+    private final Map<Monomial, Number> map; // <单项式的key -> 次数>
+
+    public TermSign(Map<Monomial, Number> map) {
         this.map = Collections.unmodifiableMap(new HashMap<>(map));//先拷贝再不可变化
     }
 
     /*-----静态方法-----*/
 
-    public static TermKey mult(TermKey t1, TermKey t2) {
+    public static TermSign mult(TermSign t1, TermSign t2) {
         //两项的x^m*x^n=x^m+n
         //两项的exp(A)*exp(B)=exp(A+B)
-        Map<TermKeyEntry, Number> ansMap = new HashMap<>(t1.map);
-        for (TermKeyEntry key : t2.map.keySet()) {
-            if (key instanceof ExpKey) {
+        Map<Monomial, Number> ansMap = new HashMap<>(t1.map);
+        for (Monomial key : t2.map.keySet()) {
+            if (key instanceof ExpMonomial) {
                 //exp
-                ExpKey found = findExpKey(ansMap); // 找ans是否有ExpKey，有则合并inner;
+                ExpMonomial found = findExpKey(ansMap); // 找ans是否有ExpKey，有则合并inner;
                 if (found != null) { //ans中有exp
                     ansMap.remove(found); //删除原有的ExpKey
                     Expression newInner = Expression.add(
-                            found.getInner(), ((ExpKey) key).getInner()
+                            found.getInner(), ((ExpMonomial) key).getInner()
                     );  //newExpKey的inner
                     if (!newInner.isZero()) { // 不是e^0
                         ansMap.put(
@@ -44,7 +46,7 @@ public class TermKey { /*
                 } else {
                     ansMap.put(key, Number.ONE);
                 }
-            } else if (key instanceof VarKey) {
+            } else if (key instanceof VarMonomial) {
                 //var
                 Number exponent = t2.map.get(key);
                 ansMap.merge(key, exponent, Number::add);
@@ -55,11 +57,11 @@ public class TermKey { /*
         return ElementFactory.newTermKey(ansMap);
     }
 
-    private static ExpKey findExpKey(Map<TermKeyEntry, Number> ansMap) {
-        ExpKey found = null;
-        for (TermKeyEntry k : ansMap.keySet()) {
-            if (k instanceof ExpKey) {
-                found = (ExpKey) k;
+    private static ExpMonomial findExpKey(Map<Monomial, Number> ansMap) {
+        ExpMonomial found = null;
+        for (Monomial k : ansMap.keySet()) {
+            if (k instanceof ExpMonomial) {
+                found = (ExpMonomial) k;
                 break;
             }
         }
@@ -75,7 +77,7 @@ public class TermKey { /*
         } else if (o == null || getClass() != o.getClass()) { //类不同
             return false;
         }
-        return Objects.equals(map, ((TermKey) o).map);   //类相同
+        return Objects.equals(map, ((TermSign) o).map);   //类相同
     }
 
     @Override
@@ -89,24 +91,24 @@ public class TermKey { /*
         //将该TermKey中的元 varName 替换成 arg
         Expression result = ElementFactory.newFactor(BigInteger.ONE).toExpression(); // 从1开始连乘
 
-        for (Map.Entry<TermKeyEntry, Number> entry : map.entrySet()) {
-            TermKeyEntry key = entry.getKey();
+        for (Map.Entry<Monomial, Number> entry : map.entrySet()) {
+            Monomial key = entry.getKey();
             Number power = entry.getValue();
 
-            if (key instanceof VarKey) {
+            if (key instanceof VarMonomial) {
                 //对多项式部分，x^n -> arg^n，
-                if (((VarKey) key).getName().equals(varName)) {
+                if (((VarMonomial) key).getName().equals(varName)) {
                     result = Expression.mult(result, Expression.pow(arg, power));
                 } else { // 其他变量名的VarKey，原样保留,result *= keep
                     Expression keep;
-                    Factor f = ElementFactory.newFactor(((VarKey) key).getName());
+                    Factor f = ElementFactory.newFactor(((VarMonomial) key).getName());
                     keep = Expression.pow(f.toExpression(), power);
                     result = Expression.mult(result, keep);
                 }
-            } else if (key instanceof ExpKey) {
+            } else if (key instanceof ExpMonomial) {
                 // 对ExpKey的inner也需要substitute
                 Expression newExpKey;
-                Expression newInner = ((ExpKey) key).getInner().
+                Expression newInner = ((ExpMonomial) key).getInner().
                         substitute(varName, arg); //代入exp(inner)中的形参
                 newExpKey = ElementFactory.newExpExpr(newInner);
                 result = Expression.mult(result, newExpKey);
@@ -123,7 +125,7 @@ public class TermKey { /*
         }
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
-        for (Map.Entry<TermKeyEntry, Number> entry : map.entrySet()) {
+        for (Map.Entry<Monomial, Number> entry : map.entrySet()) {
             if (!isFirst) {
                 sb.append("*");
             }

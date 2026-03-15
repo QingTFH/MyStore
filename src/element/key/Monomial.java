@@ -2,7 +2,7 @@ package element.key;
 
 import element.Number;
 
-public interface TermKeyEntry {
+public interface Monomial {
     @Override
     boolean equals(Object o);
 

@@ -1,7 +1,7 @@
 package lexer;
 
 public class Lexer {
-    private int pos = 0;//curToken后一位
+    private int pos = 0; // curToken后一位
     private String curToken;
     private final String input;
 
@@ -11,10 +11,7 @@ public class Lexer {
 
     public Lexer(String input) {
         this.input = removeWhitespace(input);
-
-        //System.out.println(this.input);
-
-        this.next();//初始化,curToken为第一个有效token
+        this.next(); // 初始化,curToken为第一个有效token
     }
 
     public String peek() { //获取信息
@@ -47,11 +44,11 @@ public class Lexer {
             return;
         }
 
-        if (Character.isDigit(input.charAt(pos))) { //数字
+        if (Character.isDigit(input.charAt(pos))) { // 数字
             curToken = getNumber();
-        } else if (Character.isLetter(input.charAt(pos))) {  //变量名
+        } else if (Character.isLetter(input.charAt(pos))) {  // 一串字母
             curToken = getName();
-        } else { //符号
+        } else { // 符号
             curToken = String.valueOf(input.charAt(pos));
             pos++;
         }

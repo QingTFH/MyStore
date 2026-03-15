@@ -3,10 +3,10 @@ package element.key;
 import element.Expression;
 import element.Number;
 
-public class ExpKey implements TermKeyEntry {
+public class ExpMonomial implements Monomial {
     private final Expression inner; // exp括号内化简后的Expr
 
-    public ExpKey(Expression inner) {
+    public ExpMonomial(Expression inner) {
         this.inner = inner;
     }
 
@@ -19,10 +19,10 @@ public class ExpKey implements TermKeyEntry {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof ExpKey)) {
+        if (!(o instanceof ExpMonomial)) {
             return false;
         }
-        ExpKey other = (ExpKey) o;
+        ExpMonomial other = (ExpMonomial) o;
         // 判断 this.inner - other.inner 是否恒等于0
         return Expression.subtract(this.inner, other.inner).isZero();
     }
