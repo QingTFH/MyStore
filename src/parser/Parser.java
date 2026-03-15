@@ -2,6 +2,7 @@ package parser;
 
 import element.Factor;
 import element.Expression;
+import element.Number;
 import factory.ElementFactory;
 import lexer.Lexer;
 
@@ -11,8 +12,9 @@ import java.util.Objects;
 
 public class Parser {
     private static Parser parser = null;
+    private final HashMap<String, Function> funcs = new HashMap<>(); // <函数名 -> 函数体>
+
     private Lexer lexer;
-    private HashMap<String, Function> funcs = new HashMap<>(); // <函数名 -> 函数体>
 
     private Parser(Lexer lexer) {
         this.lexer = lexer;
@@ -127,7 +129,7 @@ public class Parser {
         //这时lexer.peek是Factor后的符号
         if (Objects.equals(lexer.peek(), "^")) {
             lexer.next();
-            int n = parseFactor().toInt();
+            Number n = parseFactor().toNumber();
             return Expression.pow(ans, n);
         }
 

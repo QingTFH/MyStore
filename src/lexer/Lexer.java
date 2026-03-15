@@ -31,7 +31,7 @@ public class Lexer {
         return num.toString();
     }
 
-    private String getVarName() {
+    private String getName() {
         StringBuilder var = new StringBuilder();
         while (pos < input.length()
                 && Character.isLetter(input.charAt(pos))) {
@@ -50,7 +50,7 @@ public class Lexer {
         if (Character.isDigit(input.charAt(pos))) { //数字
             curToken = getNumber();
         } else if (Character.isLetter(input.charAt(pos))) {  //变量名
-            curToken = getVarName();
+            curToken = getName();
         } else { //符号
             curToken = String.valueOf(input.charAt(pos));
             pos++;

@@ -1,5 +1,7 @@
 package element.key;
 
+import element.Number;
+
 public class VarKey implements TermKeyEntry {
     private final String name;
 
@@ -29,13 +31,13 @@ public class VarKey implements TermKeyEntry {
     }
 
     @Override
-    public String toOutString(int power) {
-        if (power == 0) {
+    public String toOutString(Number power) {
+        if (power.equal(0)) {
             return "";
         }
-        if (power == 1) {
-            return "x";
+        if (power.equal(1)) {
+            return name;
         }
-        return "x^" + power;
+        return name + "^" + power.toOutString();
     }
 }

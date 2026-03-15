@@ -1,6 +1,7 @@
 package element.key;
 
 import element.Expression;
+import element.Number;
 
 public class ExpKey implements TermKeyEntry {
     private final Expression inner; // exp括号内化简后的Expr
@@ -32,7 +33,7 @@ public class ExpKey implements TermKeyEntry {
     }
 
     @Override
-    public String toOutString(int power) {
+    public String toOutString(Number power) {
         // power对ExpKey固定为1，幂次已乘入inner
         // 优化点2：括号冗余
         return "exp((" + inner.toOutString() + "))";

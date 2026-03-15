@@ -3,7 +3,6 @@ package element;
 import element.key.TermKeyEntry;
 import factory.ElementFactory;
 
-import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,7 +13,7 @@ public class Expression extends Element { /*
 
     统一使用Expression做计算，Factor只作提取因子用
 */
-    private final Map<TermKey, BigInteger> keyMap; //< 项特征 -> 系数 >
+    private final Map<TermKey, Number> keyMap; //< 项特征 -> 系数 >
 
     public Expression() {
         this.keyMap = new HashMap<>();
@@ -26,22 +25,24 @@ public class Expression extends Element { /*
         int flag = 0; //打印次数
         StringBuilder sb = new StringBuilder();
         for (TermKey key : keyMap.keySet()) { //该项的元
-            BigInteger coe = keyMap.get(key); //该项的系数
+            Number coe = keyMap.get(key); //该项的系数
+            Number coeAbs = coe.abs();
             //打印符号
-            if (coe.compareTo(BigInteger.ZERO) < 0) { //coe<0
+            if (!coe.gt(Number.ZERO)) { //coe<0
                 sb.append("-");
-            } else if (coe.compareTo(BigInteger.ZERO) > 0 && flag != 0) { //coe>0 且 不是第一项
+            } else if (coe.gt(Number.ZERO) && flag != 0) { //coe>0 且 不是第一项
                 sb.append("+");
             }
 
-            //打印系数(绝对值):常数 | 变元且系数不为1
-            if (key.isConst() || (!key.isConst() && !coe.abs().equals(BigInteger.ONE))) {
-                sb.append(coe.abs());
+            //打印系数(绝对值):常数 | 变元且系数绝对值不为1
+            if (key.isConst() ||
+                    ( !key.isConst() && !coeAbs.equal(1) ) ) {
+                sb.append(coe.abs().toOutString());
             }
 
             //打印元:
             if (!key.isConst()) {
-                if (!coe.abs().equals(BigInteger.ONE)) { //系数不为1
+                if (!coeAbs.equal(1)) { //系数不为1
                     sb.append("*");
                 }
                 sb.append(key.toOutString());
@@ -60,11 +61,11 @@ public class Expression extends Element { /*
     }
 
     public void addFactor(Factor factor) { //Factor转Expr的入口
-        BigInteger coe = factor.getCoe(); //factor的系数
-        if (!coe.equals(BigInteger.ZERO)) {
-            Map<TermKeyEntry,Integer> newMap = new HashMap<>(); //factor对应的TermKey的map
+        Number coe = factor.getCoe(); //factor的系数
+        if (!coe.equal(Number.ZERO)) {
+            Map<TermKeyEntry,Number> newMap = new HashMap<>(); //factor对应的TermKey的map
             if (!factor.isConst()) { //factor是变元
-                newMap.put(ElementFactory.newVarKey(factor.getVarName()),1);
+                newMap.put(ElementFactory.newVarKey(factor.getVarName()),Number.ONE);
             }
             TermKey newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
             this.mergeTerm(newKey,coe);
@@ -72,32 +73,32 @@ public class Expression extends Element { /*
     }
 
     public void addExpFactor(Expression inner) {
-        Map<TermKeyEntry, Integer> newMap = new HashMap<>();
-        newMap.put(ElementFactory.newExpKey(inner), 1);
+        Map<TermKeyEntry, Number> newMap = new HashMap<>();
+        newMap.put(ElementFactory.newExpKey(inner), Number.ONE);
         TermKey newKey = ElementFactory.newTermKey(newMap);
-        mergeTerm(newKey, BigInteger.ONE);
+        mergeTerm(newKey, Number.ONE);
     }
 
-    public int toInt() {
+    public Number toNumber() {
         if (keyMap.isEmpty()) {
-            return 0;
+            return Number.ZERO;
         }
         if (keyMap.size() != 1) {
-            throw new RuntimeException("表达式中项不唯一，无法转换为int");
+            throw new RuntimeException("表达式中项不唯一，无法转换为Number");
         }
-        Map.Entry<TermKey, BigInteger> entry = keyMap.entrySet().iterator().next();
+        Map.Entry<TermKey, Number> entry = keyMap.entrySet().iterator().next();
         if (!entry.getKey().isConst()) {
-            throw new RuntimeException("表达式是变元项，无法转换为int");
+            throw new RuntimeException("表达式是变元项，无法转换为Number");
         }
-        return entry.getValue().intValueExact();
+        return entry.getValue();
     }
 
     public Expression substitute(String varName, Expression arg) {
         //将该Expr的元varName 由 arg 代入
         Expression result = new Expression();
-        for (Map.Entry<TermKey, BigInteger> entry : keyMap.entrySet()) {
+        for (Map.Entry<TermKey, Number> entry : keyMap.entrySet()) {
             TermKey key = entry.getKey();
-            BigInteger coe = entry.getValue();
+            Number coe = entry.getValue();
             // 对这一项的TermKey进行代入
             Expression term = key.substitute(varName, arg);
             // 乘以系数
@@ -120,10 +121,10 @@ public class Expression extends Element { /*
 
     /*---------内部工具----------*/
 
-    private void mergeTerm(TermKey key, BigInteger coe) { //合并key -> coe
-        if (!coe.equals(BigInteger.ZERO)) {
-            this.keyMap.merge(key,coe,BigInteger::add);
-            if (this.keyMap.get(key).equals(BigInteger.ZERO)) {
+    private void mergeTerm(TermKey key, Number coe) { //合并<key -> coe>
+        if (!coe.equal(0)) {
+            this.keyMap.merge(key,coe,Number::add);
+            if (this.keyMap.get(key).equal(0)) {
                 this.keyMap.remove(key);
             }
         }
@@ -149,10 +150,10 @@ public class Expression extends Element { /*
     public static Expression mult(Expression m1,Expression m2) {
         Expression ans = new Expression();
         for (TermKey key1 : m1.keyMap.keySet()) { //key1 = m1的项
-            BigInteger coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
+            Number coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
             for (TermKey key2 : m2.keyMap.keySet()) { //key2 = m2的项
-                BigInteger coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
-                BigInteger ansCoe = coe1.multiply(coe2); //ansCoe = coe1 * coe2
+                Number coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
+                Number ansCoe = Number.mult(coe1,coe2); //ansCoe = coe1 * coe2
                 TermKey ansKey = TermKey.mult(key1,key2); //ansKey = key1 * key2
                 //ans += ansCoe * ansKey
                 ans.mergeTerm(ansKey,ansCoe);
@@ -161,15 +162,14 @@ public class Expression extends Element { /*
         return ans;
     }
 
-    public static Expression pow(Expression base, int exp) {
+    public static Expression pow(Expression base, Number exp) {
         Expression ans = new Expression();
-        Map<TermKeyEntry, Integer> newMap = new HashMap<>();
-        if (exp == 0) {
-            ans.mergeTerm(new TermKey(newMap), BigInteger.ONE); // 返回1
+        Map<TermKeyEntry, Number> newMap = new HashMap<>();
+        ans.mergeTerm(new TermKey(newMap), Number.ONE); // ans = 1
+        if (exp.equal(0)) {
             return ans;
         }
-        ans.mergeTerm(new TermKey(newMap), BigInteger.ONE); // ans = 1
-        for (int i = 0; i < exp; i++) {
+        for (Number i = Number.ZERO; i.compareTo(exp)<0; i = Number.add(i,Number.ONE)) {
             ans = Expression.mult(ans, base);
         }
         return ans;

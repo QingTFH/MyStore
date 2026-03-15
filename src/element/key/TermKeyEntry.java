@@ -1,5 +1,7 @@
 package element.key;
 
+import element.Number;
+
 public interface TermKeyEntry {
     @Override
     boolean equals(Object o);
@@ -7,5 +9,5 @@ public interface TermKeyEntry {
     @Override
     int hashCode();
 
-    String toOutString(int power);
+    String toOutString(Number power);
 }
