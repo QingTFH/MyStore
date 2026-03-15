@@ -63,7 +63,7 @@ public class Number {
         } else if (o == null || getClass() != o.getClass()) { //类不同
             return false;
         }
-        return this.num.equals( ((Number)o).num );   //类相同
+        return this.num.equals(((Number) o).num);   //类相同
     }
 
     @Override
@@ -73,11 +73,11 @@ public class Number {
 
     /*-----静态方法-----*/
 
-    public static Number add(Number num1,Number num2) {
+    public static Number add(Number num1, Number num2) {
         return ElementFactory.newNumber(num1.num.add(num2.num));
     }
 
-    public static Number mult(Number n1,Number n2) {
+    public static Number mult(Number n1, Number n2) {
         return ElementFactory.newNumber(n1.num.multiply(n2.num));
     }
 

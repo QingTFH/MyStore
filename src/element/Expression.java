@@ -36,7 +36,7 @@ public class Expression extends Element { /*
 
             //打印系数(绝对值):常数 | 变元且系数绝对值不为1
             if (key.isConst() ||
-                    ( !key.isConst() && !coeAbs.equal(1) ) ) {
+                    (!key.isConst() && !coeAbs.equal(1))) {
                 sb.append(coe.abs().toOutString());
             }
 
@@ -63,12 +63,12 @@ public class Expression extends Element { /*
     public void addFactor(Factor factor) { //Factor转Expr的入口
         Number coe = factor.getCoe(); //factor的系数
         if (!coe.equal(Number.ZERO)) {
-            Map<TermKeyEntry,Number> newMap = new HashMap<>(); //factor对应的TermKey的map
+            Map<TermKeyEntry, Number> newMap = new HashMap<>(); //factor对应的TermKey的map
             if (!factor.isConst()) { //factor是变元
-                newMap.put(ElementFactory.newVarKey(factor.getVarName()),Number.ONE);
+                newMap.put(ElementFactory.newVarKey(factor.getVarName()), Number.ONE);
             }
             TermKey newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
-            this.mergeTerm(newKey,coe);
+            this.mergeTerm(newKey, coe);
         }
     }
 
@@ -123,7 +123,7 @@ public class Expression extends Element { /*
 
     private void mergeTerm(TermKey key, Number coe) { //合并<key -> coe>
         if (!coe.equal(0)) {
-            this.keyMap.merge(key,coe,Number::add);
+            this.keyMap.merge(key, coe, Number::add);
             if (this.keyMap.get(key).equal(0)) {
                 this.keyMap.remove(key);
             }
@@ -132,7 +132,7 @@ public class Expression extends Element { /*
 
     /*---------静态方法----------*/
 
-    public static Expression add(Expression e1,Expression e2) {
+    public static Expression add(Expression e1, Expression e2) {
         Expression ans = new Expression();
         e1.keyMap.forEach(ans::mergeTerm);
         e2.keyMap.forEach(ans::mergeTerm);
@@ -147,16 +147,16 @@ public class Expression extends Element { /*
         return ans;
     }
 
-    public static Expression mult(Expression m1,Expression m2) {
+    public static Expression mult(Expression m1, Expression m2) {
         Expression ans = new Expression();
         for (TermKey key1 : m1.keyMap.keySet()) { //key1 = m1的项
             Number coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
             for (TermKey key2 : m2.keyMap.keySet()) { //key2 = m2的项
                 Number coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
-                Number ansCoe = Number.mult(coe1,coe2); //ansCoe = coe1 * coe2
-                TermKey ansKey = TermKey.mult(key1,key2); //ansKey = key1 * key2
+                Number ansCoe = Number.mult(coe1, coe2); //ansCoe = coe1 * coe2
+                TermKey ansKey = TermKey.mult(key1, key2); //ansKey = key1 * key2
                 //ans += ansCoe * ansKey
-                ans.mergeTerm(ansKey,ansCoe);
+                ans.mergeTerm(ansKey, ansCoe);
             }
         }
         return ans;
@@ -169,7 +169,7 @@ public class Expression extends Element { /*
         if (exp.equal(0)) {
             return ans;
         }
-        for (Number i = Number.ZERO; i.compareTo(exp)<0; i = Number.add(i,Number.ONE)) {
+        for (Number i = Number.ZERO; i.compareTo(exp) < 0; i = Number.add(i, Number.ONE)) {
             ans = Expression.mult(ans, base);
         }
         return ans;

@@ -25,13 +25,14 @@ public class MainClass {
         Expression a3 = parser.parseExpr();
         parser.setLexer(new Lexer(Input.InputLine())); //parser读取待解析表达式
         Expression a4 = parser.parseExpr();
-        Expression e1 = Expression.mult(a1,a2);
-        Expression e2 = Expression.mult(a3,Expression.mult(a4, ElementFactory.newFactor(new BigInteger("-1")).toExpression()));
+        Expression e1 = Expression.mult(a1, a2);
+        Expression e2 = Expression.mult(a3, Expression.mult(
+                a4, ElementFactory.newFactor(new BigInteger("-1")).toExpression()));
         Output.printExpr(e1);
         System.out.println();
         Output.printExpr(e2);
         System.out.println();
-        Output.printExpr(Expression.add(e1,e2));
+        Output.printExpr(Expression.add(e1, e2));
     }
 
 }

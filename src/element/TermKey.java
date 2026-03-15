@@ -37,7 +37,9 @@ public class TermKey { /*
                             found.getInner(), ((ExpKey) key).getInner()
                     );  //newExpKey的inner
                     if (!newInner.isZero()) { // 不是e^0
-                        ansMap.put(ElementFactory.newExpKey(newInner), Number.ONE); //指数函数处理后次数exponent都为1
+                        ansMap.put(
+                                ElementFactory.newExpKey(newInner), Number.ONE);
+                        //指数函数处理后次数exponent都为1
                     }
                 } else {
                     ansMap.put(key, Number.ONE);
