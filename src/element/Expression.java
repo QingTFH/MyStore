@@ -33,6 +33,94 @@ public class Expression extends Element {
         return sb.toString();
     }
 
+    @Override
+    public int hashCode() {
+        return keyMap.hashCode();
+    }
+
+    public void addFactor(Factor factor) { //Factor转Expr的入口
+        Number coe = factor.getCoe(); //factor的系数
+        if (!coe.equal(Number.ZERO)) {
+            Map<Monomial, Number> newMap = new HashMap<>(); //factor对应的TermKey的map
+            if (!factor.isConst()) { //factor是变元
+                newMap.put(ElementFactory.newVarKey(factor.getVarName()), Number.ONE);
+            }
+            TermSign newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
+            this.mergeTerm(newKey, coe);
+        }
+    }
+
+    public void addExpFactor(Expression inner) {
+        Map<Monomial, Number> newMap = new HashMap<>();
+        newMap.put(ElementFactory.newExpKey(inner), Number.ONE);
+        TermSign newKey = ElementFactory.newTermKey(newMap);
+        mergeTerm(newKey, Number.ONE);
+    }
+
+    public Expression substitute(String varName, Expression arg) {
+        //将该Expr的元varName 由 arg 代入
+        Expression result = new Expression();
+        for (Map.Entry<TermSign, Number> entry : keyMap.entrySet()) {
+            TermSign key = entry.getKey();
+            Number coe = entry.getValue();
+            // 对这一项的TermKey进行代入
+            Expression term = key.substitute(varName, arg);
+            // 乘以系数
+            Expression coeExpr = ElementFactory.newFactor(coe).toExpression();
+            term = Expression.mult(term, coeExpr);
+            result = Expression.add(result, term);
+        }
+        return result;
+    }
+
+    /*-----转化工具-----*/
+
+    @Override
+    public Expression toExpression() {
+        return this;
+    }
+
+    public Number toNumber() {
+        if (keyMap.isEmpty()) {
+            return Number.ZERO;
+        }
+        if (keyMap.size() != 1) {
+            throw new RuntimeException("表达式中项不唯一，无法转换为Number");
+        }
+        Map.Entry<TermSign, Number> entry = keyMap.entrySet().iterator().next();
+        if (!entry.getKey().isConst()) {
+            throw new RuntimeException("表达式是变元项，无法转换为Number");
+        }
+        return entry.getValue();
+    }
+
+    /*-----判断工具-----*/
+
+    public boolean isZero() {
+        //Expr是空的
+        return keyMap.isEmpty();
+    }
+
+    public boolean isFactor() {
+        // Expr是Factor -> Expr是：数字 | 幂函数 | exp
+        if (keyMap.size() == 1) { //只有一项的非系数部分及其系数
+            TermSign key = keyMap.keySet().iterator().next(); //多项式中唯一的项签名
+            return (key.isFactor() && keyMap.get(key).equal(1))|| key.isConst(); // 这个唯一的项是因子或常数
+        }
+        return false;
+    }
+
+    /*---------内部工具----------*/
+
+    private void mergeTerm(TermSign key, Number coe) { //合并<key -> coe>
+        if (!coe.equal(0)) {
+            this.keyMap.merge(key, coe, Number::add);
+            if (this.keyMap.get(key).equal(0)) {
+                this.keyMap.remove(key);
+            }
+        }
+    }
+
     private String TermToString(TermSign key) { //项 -> String
         StringBuilder sb = new StringBuilder();
         Number coe = keyMap.get(key); //该项的系数
@@ -58,90 +146,6 @@ public class Expression extends Element {
             sb.append(key.toOutString());
         }
         return sb.toString();
-    }
-
-    @Override
-    public int hashCode() {
-        return keyMap.hashCode();
-    }
-
-    @Override
-    public Expression toExpression() {
-        return this;
-    }
-
-    public void addFactor(Factor factor) { //Factor转Expr的入口
-        Number coe = factor.getCoe(); //factor的系数
-        if (!coe.equal(Number.ZERO)) {
-            Map<Monomial, Number> newMap = new HashMap<>(); //factor对应的TermKey的map
-            if (!factor.isConst()) { //factor是变元
-                newMap.put(ElementFactory.newVarKey(factor.getVarName()), Number.ONE);
-            }
-            TermSign newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
-            this.mergeTerm(newKey, coe);
-        }
-    }
-
-    public void addExpFactor(Expression inner) {
-        Map<Monomial, Number> newMap = new HashMap<>();
-        newMap.put(ElementFactory.newExpKey(inner), Number.ONE);
-        TermSign newKey = ElementFactory.newTermKey(newMap);
-        mergeTerm(newKey, Number.ONE);
-    }
-
-    public Number toNumber() {
-        if (keyMap.isEmpty()) {
-            return Number.ZERO;
-        }
-        if (keyMap.size() != 1) {
-            throw new RuntimeException("表达式中项不唯一，无法转换为Number");
-        }
-        Map.Entry<TermSign, Number> entry = keyMap.entrySet().iterator().next();
-        if (!entry.getKey().isConst()) {
-            throw new RuntimeException("表达式是变元项，无法转换为Number");
-        }
-        return entry.getValue();
-    }
-
-    public Expression substitute(String varName, Expression arg) {
-        //将该Expr的元varName 由 arg 代入
-        Expression result = new Expression();
-        for (Map.Entry<TermSign, Number> entry : keyMap.entrySet()) {
-            TermSign key = entry.getKey();
-            Number coe = entry.getValue();
-            // 对这一项的TermKey进行代入
-            Expression term = key.substitute(varName, arg);
-            // 乘以系数
-            Expression coeExpr = ElementFactory.newFactor(coe).toExpression();
-            term = Expression.mult(term, coeExpr);
-            result = Expression.add(result, term);
-        }
-        return result;
-    }
-
-    public boolean isZero() {
-        //Expr是空的
-        return keyMap.isEmpty();
-    }
-
-    public boolean isFactor() {
-        // Expr是Factor -> Expr是：数字 | 幂函数 | exp
-        if (keyMap.size() == 1) {
-            TermSign key = keyMap.keySet().iterator().next(); //多项式中唯一的项签名
-            return key.isFactor() || key.isConst(); // 这个唯一的项是因子或常数
-        }
-        return false;
-    }
-
-    /*---------内部工具----------*/
-
-    private void mergeTerm(TermSign key, Number coe) { //合并<key -> coe>
-        if (!coe.equal(0)) {
-            this.keyMap.merge(key, coe, Number::add);
-            if (this.keyMap.get(key).equal(0)) {
-                this.keyMap.remove(key);
-            }
-        }
     }
 
     /*---------静态方法----------*/
