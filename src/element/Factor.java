@@ -2,10 +2,11 @@ package element;
 
 import factory.ElementFactory;
 
-public class Factor extends Element { /*
-    x | y | ooNiuBi | +3 | -2 | 003
-    Factor存数值、变元名称()
-*/
+public class Factor extends Element {
+    /*
+     * x | y | ooNiuBi | +3 | -2 | 003
+     * Factor存数值、变元名称()
+     */
     private final Number coe; //系数
     private final String varName; //变量名
 

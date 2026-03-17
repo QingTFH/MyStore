@@ -6,14 +6,13 @@ import factory.ElementFactory;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Expression extends Element { /*
-    3 * x^7 * y^2 + 2 * ooNiuBi ^ 5
-    表达式：若干个Term的和，
-    存若干个项，如果项内名称和幂次都相同(即TermKey相同)则合并
-
-    统一使用Expression做计算，Factor只作提取因子用
-*/
-    private final Map<TermSign, Number> keyMap; //< 项特征 -> 系数 >
+public class Expression extends Element {
+    /*  3 * x^7 * y^2 + 2 * ooNiuBi ^ 5
+     *  表达式：若干个Term的和，
+     *  存若干个项，如果项内名称和幂次都相同(即TermKey相同)则合并
+     *  统一使用Expression做计算，Factor只作提取因子用
+     */
+    private final Map<TermSign, Number> keyMap; // <项签名TermSign -> 该项系数>
 
     public Expression() {
         this.keyMap = new HashMap<>();
@@ -21,38 +20,49 @@ public class Expression extends Element { /*
 
     /*---------对外方法----------*/
 
-    public String toOutString() {
-        int flag = 0; //打印次数
+    public String toOutString() { //Expr -> String
         StringBuilder sb = new StringBuilder();
         for (TermSign key : keyMap.keySet()) { //该项的元
-            Number coe = keyMap.get(key); //该项的系数
-            Number coeAbs = coe.abs();
-            //打印符号
-            if (!coe.gt(Number.ZERO)) { //coe<0
-                sb.append("-");
-            } else if (coe.gt(Number.ZERO) && flag != 0) { //coe>0 且 不是第一项
-                sb.append("+");
-            }
-
-            //打印系数(绝对值):常数 | 变元且系数绝对值不为1
-            if (key.isConst() ||
-                    (!key.isConst() && !coeAbs.equal(1))) {
-                sb.append(coe.abs().toOutString());
-            }
-
-            //打印元:
-            if (!key.isConst()) {
-                if (!coeAbs.equal(1)) { //系数不为1
-                    sb.append("*");
-                }
-                sb.append(key.toOutString());
-            }
-            flag++;
+            sb.append(TermToString(key));
         }
-        if (flag == 0) {
+        if (sb.length() == 0) { //sb为空
             sb.append("0");
+        } else if (sb.charAt(0) == '+') {
+            sb.deleteCharAt(0);
         }
         return sb.toString();
+    }
+
+    private String TermToString(TermSign key) { //项 -> String
+        StringBuilder sb = new StringBuilder();
+        Number coe = keyMap.get(key); //该项的系数
+        Number coeAbs = coe.abs();
+        //打印符号
+        if (!coe.gt(Number.ZERO)) { //coe<0
+            sb.append("-");
+        } else { //coe>0
+            sb.append("+");
+        }
+
+        //打印系数(绝对值):常数 | 变元且系数绝对值不为1
+        if (key.isConst() ||
+                (!key.isConst() && !coeAbs.equal(1))) {
+            sb.append(coe.abs().toOutString());
+        }
+
+        //打印元:
+        if (!key.isConst()) {
+            if (!coeAbs.equal(1)) { //系数不为1
+                sb.append("*");
+            }
+            sb.append(key.toOutString());
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        return keyMap.hashCode();
     }
 
     @Override
@@ -114,9 +124,13 @@ public class Expression extends Element { /*
         return keyMap.isEmpty();
     }
 
-    @Override
-    public int hashCode() {
-        return keyMap.hashCode();
+    public boolean isFactor() {
+        // Expr是Factor -> Expr是：数字 | 幂函数 | exp
+        if (keyMap.size() == 1) {
+            TermSign key = keyMap.keySet().iterator().next(); //多项式中唯一的项签名
+            return key.isFactor() || key.isConst(); // 这个唯一的项是因子或常数
+        }
+        return false;
     }
 
     /*---------内部工具----------*/

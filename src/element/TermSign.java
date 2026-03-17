@@ -13,11 +13,11 @@ import java.util.Objects;
 
 public class TermSign {
     /*
-    *   项的非系数部分
-    *   x^7 * y^2 * exp(inner)
-    */
+     *   项签名： 项的非系数部分
+     *   x^7 * y^2 * exp(inner)
+     */
 
-    private final Map<Monomial, Number> map; // <单项式的key -> 次数>
+    private final Map<Monomial, Number> map; // <项中Monomial的key -> 次数>
 
     public TermSign(Map<Monomial, Number> map) {
         this.map = Collections.unmodifiableMap(new HashMap<>(map));//先拷贝再不可变化
@@ -136,7 +136,11 @@ public class TermSign {
     }
 
     public boolean isConst() {
-        return this.map.isEmpty();
+        return this.map.isEmpty(); // 该项没有非系数部分
+    }
+
+    public boolean isFactor() {
+        return (this.map.size() == 1); // 该项的非系数部分只有一个
     }
 
 }

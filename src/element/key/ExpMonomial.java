@@ -35,7 +35,9 @@ public class ExpMonomial implements Monomial {
     @Override
     public String toOutString(Number power) {
         // power对ExpKey固定为1，幂次已乘入inner
-        // 优化点2：括号冗余
+        if (inner.isFactor()) {
+            return "exp(" + inner.toOutString() + ")";
+        }
         return "exp((" + inner.toOutString() + "))";
     }
 }
