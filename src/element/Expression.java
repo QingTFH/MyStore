@@ -105,7 +105,7 @@ public class Expression extends Element {
         // Expr是Factor -> Expr是：数字 | 幂函数 | exp
         if (keyMap.size() == 1) { //只有一项的非系数部分及其系数
             TermSign key = keyMap.keySet().iterator().next(); //多项式中唯一的项签名
-            return (key.isFactor() && keyMap.get(key).equal(1))|| key.isConst(); // 这个唯一的项是因子或常数
+            return (key.isFactor() && keyMap.get(key).equal(1)) || key.isConst(); // 这个唯一的项是因子或常数
         }
         return false;
     }

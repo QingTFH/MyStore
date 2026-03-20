@@ -124,6 +124,53 @@ public class Parser {
         return ans;
     }
 
+    private void skipFactor() {
+        //跳过一整个Factor->常数、带符号常数、幂函数、函数调用、选择式、表达式因子
+        String fac = lexer.peek();
+        if (Objects.equals(fac, "(")) { // 表达式
+            skipBalanced(fac);
+            skipExponent();
+        } else if (Objects.equals(fac, "[")) { // 选择式
+            skipBalanced(fac);
+        } else if (Objects.equals(fac, "exp")) {
+            lexer.next(); //后续是(inner)
+            skipBalanced("(");
+            skipExponent();
+        } else if (Objects.equals(fac, "f")) {
+            lexer.next(); //后续是(arg)
+            skipBalanced("(");
+        } else {
+            // x、常数、带符号常数，可能有^n
+            lexer.next();
+            skipExponent();
+        }
+    }
+
+    private void skipBalanced(String open) {
+        // 对于用括号包裹的因子，消费完匹配的"(inner)" 或者 "[inner]"
+        lexer.next();
+        String close = Objects.equals(open, "(") ? ")" : "]";
+        int depth = 1;
+        while (depth > 0) {
+            String tok = lexer.peek();
+            lexer.next();
+            if (tok.equals(open)) {
+                depth++;
+            }
+            else if (tok.equals(close)) {
+                depth--;
+            }
+        } //跳出循环后，curToken = close的next
+    }
+
+    private void skipExponent() {
+        //消费"^Number"
+        if (Objects.equals(lexer.peek(), "^")) {
+            lexer.next(); // 消费 "^"
+            lexer.next(); // 消费 指数数字
+        }
+    }
+
     private Expression parseExprFactor() {
         Expression expr = parseExpr(); // 解析表达式
         lexer.next(); // 略过右括号
@@ -152,19 +199,21 @@ public class Parser {
         lexer.next();
         lexer.next();
         Expression b = parseFactor(); // 之后peek是")"
+        Expression diff = Expression.subtract(a, b);
         lexer.next(); // 消费 ")"
         lexer.next(); // 消费 "?"
-        Expression c = parseFactor(); // 之后是":"
-        lexer.next(); // 消费 ":"
-        Expression d = parseFactor(); // 此时peek是"]"
-        lexer.next(); // 消费 "]",来到ChooseFactor后的第一个token
-
-        Expression diff = Expression.subtract(a, b);
+        Expression ans;
         if (diff.isZero()) {
-            return c;
+            ans = parseFactor(); // parseC
+            lexer.next(); // 消费 ":"
+            skipFactor(); // 跳过D 后续是"]"
         } else {
-            return d;
+            skipFactor(); // 跳过C，后续是 " :D] "
+            lexer.next(); // 消费 ":"
+            ans = parseFactor(); // parseD
         }
+        lexer.next(); // 消费 "]",来到ChooseFactor后的第一个token
+        return ans;
     }
 
     private Expression parseExp() {

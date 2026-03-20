@@ -24,8 +24,5 @@ public class MainClass {
 
 }
 /*
- *  可优化点：
- *      1.正项提前
- *      2.exp()中的括号冗余
- *      3.exp(a*y)与exp(y)^a对比
+ *  修复bug?其实是优化性能:parseChoose中，对于不需要的因子，没必要展开；例如要返回D，则不应展开C，而是直接跳过
  */
