@@ -1,7 +1,7 @@
-package element.Atom;
+package element.atom;
 
 import element.Expression;
-import element.mNumber;
+import element.MyNumber;
 import element.ElementFactory;
 
 public class ExpAtom extends TranscenAtom {
@@ -11,7 +11,7 @@ public class ExpAtom extends TranscenAtom {
     }
 
     @Override
-    public String toOutString(mNumber power) {
+    public String toOutString(MyNumber power) {
         // power对ExpKey固定为1，幂次已乘入inner
         if (getInner().isFactor()) {
             return "exp(" + getInner().toOutString() + ")";
@@ -20,18 +20,18 @@ public class ExpAtom extends TranscenAtom {
     }
 
     @Override
-    public Expression derive(String var, mNumber power) { // dv(exp(inner)^power) = dv(exp(inner*power))
-        // ->   exp(power*inner) * dv(power*inner) -> p * exp(p*i) * dv(i)
+    public Expression derive(String var, MyNumber power) {
+        // dv(exp(inner)^power) = dv(exp(inner*power))
+        // -> exp(power*inner) * dv(power*inner) -> p * exp(p*i) * dv(i)
         Expression expr = toExpr(power); // exp(p*i)
-        expr = Expression.mult(Expression.mult(expr,power.toExpr()),
+        expr = Expression.mult(Expression.mult(expr, power.toExpr()),
                 getInner().derive(var)); //
         return expr;
     }
 
     @Override
-    public Expression toExpr(mNumber power) { // exp(inner*power)
-        return ElementFactory.newTransExpr(Expression.mult(getInner(),power.toExpr()));
+    public Expression toExpr(MyNumber power) { // exp(inner*power)
+        return ElementFactory.newTransExpr(Expression.mult(getInner(), power.toExpr()));
     }
-
 
 }

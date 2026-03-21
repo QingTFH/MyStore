@@ -55,7 +55,7 @@ public class Lexer {
     }
 
     public void nextLoop(int n) {
-        for(int i=0;i<n;i++) {
+        for (int i = 0; i < n; i++) {
             next();
         }
     }

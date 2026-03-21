@@ -1,7 +1,7 @@
-package element.Atom;
+package element.atom;
 
 import element.Expression;
-import element.mNumber;
+import element.MyNumber;
 import element.ElementFactory;
 
 public class VarAtom implements Atom {
@@ -33,7 +33,7 @@ public class VarAtom implements Atom {
     }
 
     @Override
-    public String toOutString(mNumber power) {
+    public String toOutString(MyNumber power) {
         if (power.equal(0)) {
             return "";
         }
@@ -44,9 +44,9 @@ public class VarAtom implements Atom {
     }
 
     @Override
-    public Expression derive(String var, mNumber exponent) { //其实应该返回Term类型，但是考虑到exp(inner)求导完是Expr类型，统一了
-        if(name.equals(var)) { // dv(v^e)
-            mNumber newPower = mNumber.add(exponent, ElementFactory.newNumber(-1));
+    public Expression derive(String var, MyNumber exponent) {
+        if (name.equals(var)) { // dv(v^e)
+            MyNumber newPower = MyNumber.add(exponent, ElementFactory.newNumber(-1));
             if (newPower.equal(0)) { // 直接返回系数，避免构造x^0
                 return ElementFactory.newConstExpr(exponent);
             }
@@ -59,7 +59,7 @@ public class VarAtom implements Atom {
     }
 
     @Override
-    public Expression toExpr(mNumber power) { // var^power
-        return ElementFactory.newVarExpr(name,power);
+    public Expression toExpr(MyNumber power) { // var^power
+        return ElementFactory.newVarExpr(name, power);
     }
 }

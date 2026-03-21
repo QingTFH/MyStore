@@ -3,10 +3,10 @@ package element;
 import java.math.BigInteger;
 import java.util.Objects;
 
-public class mNumber {
+public class MyNumber {
     private final BigInteger num;
 
-    mNumber(BigInteger num) {
+    MyNumber(BigInteger num) {
         this.num = num;
     }
 
@@ -16,12 +16,12 @@ public class mNumber {
 
     /*-----常用值-----*/
 
-    public static final mNumber ZERO = new mNumber(BigInteger.ZERO);
-    public static final mNumber ONE = new mNumber(BigInteger.ONE);
+    public static final MyNumber ZERO = new MyNumber(BigInteger.ZERO);
+    public static final MyNumber ONE = new MyNumber(BigInteger.ONE);
 
     /*-----对外方法-----*/
 
-    public mNumber negate() {
+    public MyNumber negate() {
         return ElementFactory.newNumber(this.num.negate());
     }
 
@@ -29,20 +29,20 @@ public class mNumber {
         return this.num.equals(BigInteger.valueOf(number));
     }
 
-    public mNumber abs() {
-        return new mNumber(this.num.abs());
+    public MyNumber abs() {
+        return new MyNumber(this.num.abs());
     }
 
     public String toOutString() {
         return this.num.toString();
     }
 
-    public int compareTo(mNumber mNumber) {
-        return this.num.compareTo(mNumber.num);
+    public int compareTo(MyNumber myNumber) {
+        return this.num.compareTo(myNumber.num);
     }
 
-    public boolean gt(mNumber mNumber) { //大于
-        return this.compareTo(mNumber) > 0;
+    public boolean gt(MyNumber myNumber) { //大于
+        return this.compareTo(myNumber) > 0;
     }
 
     public Expression toExpr() {
@@ -56,7 +56,7 @@ public class mNumber {
         } else if (o == null || getClass() != o.getClass()) { //类不同
             return false;
         }
-        return this.num.equals(((mNumber) o).num);   //类相同
+        return this.num.equals(((MyNumber) o).num);   //类相同
     }
 
     @Override
@@ -66,11 +66,11 @@ public class mNumber {
 
     /*-----静态方法-----*/
 
-    public static mNumber add(mNumber num1, mNumber num2) {
+    public static MyNumber add(MyNumber num1, MyNumber num2) {
         return ElementFactory.newNumber(num1.num.add(num2.num));
     }
 
-    public static mNumber mult(mNumber n1, mNumber n2) {
+    public static MyNumber mult(MyNumber n1, MyNumber n2) {
         return ElementFactory.newNumber(n1.num.multiply(n2.num));
     }
 

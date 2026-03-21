@@ -1,7 +1,7 @@
 package parser;
 
 import element.Expression;
-import element.mNumber;
+import element.MyNumber;
 import element.ElementFactory;
 import lexer.Lexer;
 
@@ -38,13 +38,13 @@ public class Parser {
             flag = getFlag();
         }
         Expression term = SignBase(flag); // term = +1 | -1
-        term = Expression.mult(term,parseTerm()); // term = 符号 * parseTerm()
-        ansExpr = Expression.add(ansExpr,term); // ansExpr += term
+        term = Expression.mult(term, parseTerm()); // term = 符号 * parseTerm()
+        ansExpr = Expression.add(ansExpr, term); // ansExpr += term
 
         while (isPlusOrSub(lexer.peek())) { // 向后解析
             term = SignBase(getFlag()); // term = +1 | -1
-            term = Expression.mult(term,parseTerm()); // 符号 * parseTerm
-            ansExpr = Expression.add(ansExpr,term);
+            term = Expression.mult(term, parseTerm()); // 符号 * parseTerm
+            ansExpr = Expression.add(ansExpr, term);
         }
         return ansExpr; //此时curToken为右括号后的符号，或终点
     }
@@ -78,7 +78,7 @@ public class Parser {
         Expression ans = parseFactorByType(fac);
         if (Objects.equals(lexer.peek(), "^")) {
             lexer.next();
-            mNumber n = parseFactor().toNumber();
+            MyNumber n = parseFactor().toNumber();
             ans = Expression.pow(ans, n);
         }
         return ans;
@@ -163,7 +163,7 @@ public class Parser {
     private Expression parseFunction() {
         /* 待解析: f(arg) 或 f{n}(arg) */
         lexer.next(); // 消费"f"
-        if(lexer.peek().equals("{")) {
+        if (lexer.peek().equals("{")) {
             return parseRecuFunction();
         }
         return func.apply(parseArg());
@@ -175,7 +175,7 @@ public class Parser {
         int n = Integer.parseInt(lexer.peek());
         lexer.next(); // 消费n
         lexer.next(); // 消费 }
-        return recuFunc.apply(n,parseArg());
+        return recuFunc.apply(n, parseArg());
     }
 
     private Expression parseArg() {
@@ -197,7 +197,7 @@ public class Parser {
 
     private Expression parseVarFactor() {
         /* 待解析: "varName" */
-        Expression ans = ElementFactory.newVarExpr(lexer.peek(), mNumber.ONE);
+        Expression ans = ElementFactory.newVarExpr(lexer.peek(), MyNumber.ONE);
         lexer.next();
         return ans;
     }
@@ -219,10 +219,10 @@ public class Parser {
 
     public void parseFuncDef() {
         // " f(x)=Expr "
-        String funcName = lexer.peek();
+        final String funcName = lexer.peek();
         lexer.next(); // peek = "("
         lexer.next(); // peek = "x"
-        String varName = lexer.peek();
+        final String varName = lexer.peek();
         lexer.next(); // peek = ")"
         lexer.next(); // peek = "="
         lexer.next(); // peek = Expression第一个token
@@ -236,7 +236,7 @@ public class Parser {
         int num = Integer.parseInt(lexer.peek());
         lexer.nextLoop(6); // 消费 num } ( x ) =
         Expression expr = parseExpr();
-        recuFunc.setFx(num,expr);
+        recuFunc.setFx(num, expr);
     }
 
     public void parseRecuFuncDefN() {
@@ -245,30 +245,30 @@ public class Parser {
         lexer.nextLoop(8); // 消费 f { n } ( varName ) =
 
         //推导式1
-        Expression coe1 = parseNumber(); // 获取并消费coe1
+        final Expression coe1 = parseNumber(); // 获取并消费coe1
         lexer.nextLoop(8); // 消费 * f { n - 1 } (
-        Expression arg1 = parseExpr(); // 消费arg1
+        final Expression arg1 = parseExpr(); // 消费arg1
         lexer.next(); // 消费)
 
         //推导式2
         Expression sign1 = ElementFactory.newConstExpr(
-                ElementFactory.newNumber(lexer.peek().equals("-") ? -1:1));
+                ElementFactory.newNumber(lexer.peek().equals("-") ? -1 : 1));
         lexer.next(); // 消费+|-
-        Expression coe2 = Expression.mult(sign1,parseNumber()); // 获取并消费coe2
+        final Expression coe2 = Expression.mult(sign1, parseNumber()); // 获取并消费coe2
         lexer.nextLoop(8); // 消费 * f { n - 2 } (
-        Expression arg2 = parseExpr(); //消费arg2
+        final Expression arg2 = parseExpr(); //消费arg2
         lexer.next(); // 消费)
 
         //推导式extra
         Expression extra = ElementFactory.newSpaceExpr();
-        if(!lexer.peek().isEmpty()) { // 有extra
+        if (!lexer.peek().isEmpty()) { // 有extra
             Expression sign2 = ElementFactory.newConstExpr(
-                    ElementFactory.newNumber(lexer.peek().equals("-") ? -1:1));
+                    ElementFactory.newNumber(lexer.peek().equals("-") ? -1 : 1));
             lexer.next(); //消费+|-
-            extra = Expression.mult(sign2,parseExpr());
+            extra = Expression.mult(sign2, parseExpr());
         }
 
-        recuFunc.setOther(coe1,coe2,arg1,arg2,extra);
+        recuFunc.setOther(coe1, coe2, arg1, arg2, extra);
     }
 
     /*-----SKIP-----*/
@@ -287,11 +287,11 @@ public class Parser {
             skipExponent();
         } else if (Objects.equals(fac, "f")) {
             lexer.next(); // 消费 f
-            if(lexer.peek().equals("{")) {
+            if (lexer.peek().equals("{")) {
                 skipBalanced("{");
             }
             skipBalanced("(");
-        } else if(Objects.equals(fac, "dx") ||
+        } else if (Objects.equals(fac, "dx") ||
                 Objects.equals(fac, "dy") ||
                 Objects.equals(fac, "grad")) {
             lexer.next(); // 消费 dx|dy|grad
@@ -306,17 +306,16 @@ public class Parser {
     private void skipBalanced(String open) {
         // 对于用括号包裹的因子，消费完匹配的"(inner)" 或者 "[inner]" 或者 "{inner}"
         lexer.next();
-        String close =  Objects.equals(open, "(") ? ")" :
-                        Objects.equals(open, "[") ? "]" :
-                            "}";
+        String close = Objects.equals(open, "(") ? ")" :
+                Objects.equals(open, "[") ? "]" :
+                        "}";
         int depth = 1;
         while (depth > 0) {
             String tok = lexer.peek();
             lexer.next();
             if (tok.equals(open)) {
                 depth++;
-            }
-            else if (tok.equals(close)) {
+            } else if (tok.equals(close)) {
                 depth--;
             }
         } //跳出循环后，curToken = close的next
@@ -337,9 +336,9 @@ public class Parser {
             throw new IllegalArgumentException("判断正负Factor时出现非法符号" + a);
         }
         if (Objects.equals(a, "+")) {
-            return ElementFactory.newConstExpr(mNumber.ONE); // +1
+            return ElementFactory.newConstExpr(MyNumber.ONE); // +1
         } else {
-            return ElementFactory.newConstExpr(mNumber.ONE.negate()); // -1
+            return ElementFactory.newConstExpr(MyNumber.ONE.negate()); // -1
         }
     }
 

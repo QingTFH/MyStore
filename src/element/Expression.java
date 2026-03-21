@@ -9,13 +9,13 @@ public class Expression extends Element {
      *  存若干个项，如果项内名称和幂次都相同(即TermKey相同)则合并
      *  统一使用Expression做计算，Factor只作提取因子用
      */
-    private final Map<TermSign, mNumber> keyMap; // <项签名TermSign -> 该项系数>
+    private final Map<TermSign, MyNumber> keyMap; // <项签名TermSign -> 该项系数>
 
     Expression() {
         this.keyMap = new HashMap<>();
     }
 
-    Expression(TermSign term, mNumber coe) {
+    Expression(TermSign term, MyNumber coe) {
         this.keyMap = new HashMap<>();
         keyMap.put(term, coe);
     }
@@ -43,7 +43,7 @@ public class Expression extends Element {
     public Expression substitute(String varName, Expression arg) {
         //将该Expr的元varName 由 arg 代入
         Expression result = new Expression();
-        for (Map.Entry<TermSign, mNumber> entry : keyMap.entrySet()) {
+        for (Map.Entry<TermSign, MyNumber> entry : keyMap.entrySet()) {
             Expression term = entry.getKey().
                     substitute(varName, arg); // 对这一项的TermSign进行代入
             term = Expression.mult(term,
@@ -71,14 +71,14 @@ public class Expression extends Element {
         return this;
     }
 
-    public mNumber toNumber() {
+    public MyNumber toNumber() {
         if (keyMap.isEmpty()) {
-            return mNumber.ZERO;
+            return MyNumber.ZERO;
         }
         if (keyMap.size() != 1) {
             throw new RuntimeException("表达式中项不唯一，无法转换为Number");
         }
-        Map.Entry<TermSign, mNumber> entry = keyMap.entrySet().iterator().next();
+        Map.Entry<TermSign, MyNumber> entry = keyMap.entrySet().iterator().next();
         if (!entry.getKey().isConst()) {
             throw new RuntimeException("表达式是变元项，无法转换为Number");
         }
@@ -103,9 +103,9 @@ public class Expression extends Element {
 
     /*---------内部工具----------*/
 
-    private void mergeTerm(TermSign key, mNumber coe) { //合并<key -> coe>
+    private void mergeTerm(TermSign key, MyNumber coe) { //合并<key -> coe>
         if (!coe.equal(0)) {
-            this.keyMap.merge(key, coe, mNumber::add);
+            this.keyMap.merge(key, coe, MyNumber::add);
             if (this.keyMap.get(key).equal(0)) {
                 this.keyMap.remove(key);
             }
@@ -114,10 +114,10 @@ public class Expression extends Element {
 
     private String TermToString(TermSign key) { //项 -> String
         StringBuilder sb = new StringBuilder();
-        mNumber coe = keyMap.get(key); //该项的系数
-        mNumber coeAbs = coe.abs();
+        MyNumber coe = keyMap.get(key); //该项的系数
+        MyNumber coeAbs = coe.abs();
         //打印符号
-        if (!coe.gt(mNumber.ZERO)) { //coe<0
+        if (!coe.gt(MyNumber.ZERO)) { //coe<0
             sb.append("-");
         } else { //coe>0
             sb.append("+");
@@ -159,10 +159,10 @@ public class Expression extends Element {
     public static Expression mult(Expression m1, Expression m2) {
         Expression ans = new Expression();
         for (TermSign key1 : m1.keyMap.keySet()) { //key1 = m1的项
-            mNumber coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
+            MyNumber coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
             for (TermSign key2 : m2.keyMap.keySet()) { //key2 = m2的项
-                mNumber coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
-                mNumber ansCoe = mNumber.mult(coe1, coe2); //ansCoe = coe1 * coe2
+                MyNumber coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
+                MyNumber ansCoe = MyNumber.mult(coe1, coe2); //ansCoe = coe1 * coe2
                 TermSign ansKey = TermSign.mult(key1, key2); //ansKey = key1 * key2
                 //ans += ansCoe * ansKey
                 ans.mergeTerm(ansKey, ansCoe);
@@ -171,13 +171,13 @@ public class Expression extends Element {
         return ans;
     }
 
-    public static Expression pow(Expression base, mNumber exp) {
+    public static Expression pow(Expression base, MyNumber exp) {
         Expression ans = ElementFactory.newSpaceExpr();
-        ans.mergeTerm(ElementFactory.newSpaceTermSign(), mNumber.ONE); // ans = 1
+        ans.mergeTerm(ElementFactory.newSpaceTermSign(), MyNumber.ONE); // ans = 1
         if (exp.equal(0)) {
             return ans;
         }
-        for (mNumber i = mNumber.ZERO; i.compareTo(exp) < 0; i = mNumber.add(i, mNumber.ONE)) {
+        for (MyNumber i = MyNumber.ZERO; i.compareTo(exp) < 0; i = MyNumber.add(i, MyNumber.ONE)) {
             ans = Expression.mult(ans, base);
         }
         return ans;

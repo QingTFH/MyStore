@@ -1,8 +1,8 @@
-package element.Atom;
+package element.atom;
 
 import element.Expression;
 
-public abstract class TranscenAtom implements Atom{
+public abstract class TranscenAtom implements Atom {
     private final Expression inner;
 
     protected TranscenAtom(Expression inner) {
@@ -24,7 +24,8 @@ public abstract class TranscenAtom implements Atom{
             return false;
         }
         TranscenAtom other = (TranscenAtom) o;
-        return Expression.subtract(this.inner, other.inner).isZero(); // 判断 this.inner - other.inner 是否恒等于0
+        return Expression.subtract(
+                this.inner, other.inner).isZero();// 判断 this.inner - other.inner 是否恒等于0
     }
 
     @Override
