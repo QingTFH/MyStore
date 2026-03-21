@@ -24,5 +24,6 @@ public class MainClass {
 
 }
 /*
- *  修复bug?其实是优化性能:parseChoose中，对于不需要的因子，没必要展开；例如要返回D，则不应展开C，而是直接跳过
+ *  新增求导因子
+ *  新增f{n}(x)
  */

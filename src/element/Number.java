@@ -1,14 +1,12 @@
 package element;
 
-import factory.ElementFactory;
-
 import java.math.BigInteger;
 import java.util.Objects;
 
 public class Number {
     private final BigInteger num;
 
-    public Number(BigInteger num) {
+    Number(BigInteger num) {
         this.num = num;
     }
 
@@ -24,7 +22,6 @@ public class Number {
 
     public static final Number ZERO = new Number(BigInteger.ZERO);
     public static final Number ONE = new Number(BigInteger.ONE);
-    public static final Number MINUS_ONE = new Number(BigInteger.ZERO.negate());
 
     /*-----对外方法-----*/
 
@@ -54,6 +51,10 @@ public class Number {
 
     public boolean gt(Number number) { //大于
         return this.compareTo(number) > 0;
+    }
+
+    public Expression toExpr() {
+        return ElementFactory.newConstExpr(this);
     }
 
     @Override

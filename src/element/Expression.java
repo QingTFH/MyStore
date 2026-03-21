@@ -1,8 +1,5 @@
 package element;
 
-import element.key.Monomial;
-import factory.ElementFactory;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,8 +11,13 @@ public class Expression extends Element {
      */
     private final Map<TermSign, Number> keyMap; // <项签名TermSign -> 该项系数>
 
-    public Expression() {
+    Expression() {
         this.keyMap = new HashMap<>();
+    }
+
+    Expression(TermSign term, Number coe) {
+        this.keyMap = new HashMap<>();
+        keyMap.put(term, coe);
     }
 
     /*---------对外方法----------*/
@@ -38,39 +40,28 @@ public class Expression extends Element {
         return keyMap.hashCode();
     }
 
-    public void addFactor(Factor factor) { //Factor转Expr的入口
-        Number coe = factor.getCoe(); //factor的系数
-        if (!coe.equal(Number.ZERO)) {
-            Map<Monomial, Number> newMap = new HashMap<>(); //factor对应的TermKey的map
-            if (!factor.isConst()) { //factor是变元
-                newMap.put(ElementFactory.newVarKey(factor.getVarName()), Number.ONE);
-            }
-            TermSign newKey = ElementFactory.newTermKey(newMap); //factor的TermKey
-            this.mergeTerm(newKey, coe);
-        }
-    }
-
-    public void addExpFactor(Expression inner) {
-        Map<Monomial, Number> newMap = new HashMap<>();
-        newMap.put(ElementFactory.newExpKey(inner), Number.ONE);
-        TermSign newKey = ElementFactory.newTermKey(newMap);
-        mergeTerm(newKey, Number.ONE);
-    }
-
     public Expression substitute(String varName, Expression arg) {
         //将该Expr的元varName 由 arg 代入
         Expression result = new Expression();
         for (Map.Entry<TermSign, Number> entry : keyMap.entrySet()) {
-            TermSign key = entry.getKey();
-            Number coe = entry.getValue();
-            // 对这一项的TermKey进行代入
-            Expression term = key.substitute(varName, arg);
-            // 乘以系数
-            Expression coeExpr = ElementFactory.newFactor(coe).toExpression();
-            term = Expression.mult(term, coeExpr);
+            Expression term = entry.getKey().
+                    substitute(varName, arg); // 对这一项的TermSign进行代入
+            term = Expression.mult(term,
+                    ElementFactory.newConstExpr(
+                            entry.getValue())); // 乘以系数
             result = Expression.add(result, term);
         }
         return result;
+    }
+
+    public Expression derive(String var) { //对一个多项式求导 -> 对每一项求导、结果乘以系数、再相加
+        Expression ans = ElementFactory.newSpaceExpr();
+        for (TermSign entry : this.keyMap.keySet()) {
+            ans = Expression.add(ans,
+                    Expression.mult(
+                            entry.derive(var), keyMap.get(entry).toExpr())); // 单项式求导结果乘以系数，与ans相加
+        }
+        return ans;
     }
 
     /*-----转化工具-----*/
@@ -181,9 +172,8 @@ public class Expression extends Element {
     }
 
     public static Expression pow(Expression base, Number exp) {
-        Expression ans = new Expression();
-        Map<Monomial, Number> newMap = new HashMap<>();
-        ans.mergeTerm(new TermSign(newMap), Number.ONE); // ans = 1
+        Expression ans = ElementFactory.newSpaceExpr();
+        ans.mergeTerm(ElementFactory.newSpaceTermSign(), Number.ONE); // ans = 1
         if (exp.equal(0)) {
             return ans;
         }

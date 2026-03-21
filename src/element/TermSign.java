@@ -1,13 +1,13 @@
 package element;
 
-import element.key.ExpMonomial;
-import element.key.Monomial;
-import element.key.VarMonomial;
-import factory.ElementFactory;
+import element.Atom.ExpAtom;
+import element.Atom.Atom;
+import element.Atom.TranscenAtom;
+import element.Atom.VarAtom;
 
-import java.math.BigInteger;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -17,51 +17,64 @@ public class TermSign {
      *   x^7 * y^2 * exp(inner)
      */
 
-    private final Map<Monomial, Number> map; // <项中Monomial的key -> 次数>
+    private final Map<VarAtom, Number> algeMap; // <项中代数子的name -> 次数>
+    private final Map<TranscenAtom, Number> transcenMap; // <项中超越子的key -> 次数>
 
-    public TermSign(Map<Monomial, Number> map) {
-        this.map = Collections.unmodifiableMap(new HashMap<>(map));//先拷贝再不可变化
+    TermSign(Map<VarAtom, Number> algeMap,
+             Map<TranscenAtom, Number> transcenMap) { // 包级访问
+        this.algeMap = new HashMap<>(algeMap);
+        this.transcenMap = new HashMap<>(transcenMap);
     }
 
     /*-----静态方法-----*/
 
     public static TermSign mult(TermSign t1, TermSign t2) {
-        //两项的x^m*x^n=x^m+n
-        //两项的exp(A)*exp(B)=exp(A+B)
-        Map<Monomial, Number> ansMap = new HashMap<>(t1.map);
-        for (Monomial key : t2.map.keySet()) {
-            if (key instanceof ExpMonomial) {
-                //exp
-                ExpMonomial found = findExpKey(ansMap); // 找ans是否有ExpKey，有则合并inner;
-                if (found != null) { //ans中有exp
-                    ansMap.remove(found); //删除原有的ExpKey
-                    Expression newInner = Expression.add(
-                            found.getInner(), ((ExpMonomial) key).getInner()
-                    );  //newExpKey的inner
-                    if (!newInner.isZero()) { // 不是e^0
-                        ansMap.put(
-                                ElementFactory.newExpKey(newInner), Number.ONE);
-                        //指数函数处理后次数exponent都为1
-                    }
-                } else {
-                    ansMap.put(key, Number.ONE);
-                }
-            } else if (key instanceof VarMonomial) {
-                //var
-                Number exponent = t2.map.get(key);
-                ansMap.merge(key, exponent, Number::add);
-            } else {
-                throw new IllegalArgumentException("TermKey合并时出错");
-            }
-        }
-        return ElementFactory.newTermKey(ansMap);
+        TermSign ans = ElementFactory.newSpaceTermSign();
+        // 合并代数部分
+        ans.algeMap.putAll(t1.algeMap);
+        mergeAlge(ans.algeMap, t2.algeMap);
+        // 合并超越部分
+        ans.transcenMap.putAll(t1.transcenMap);
+        mergeTrans(ans.transcenMap, t2.transcenMap);
+        return ans;
     }
 
-    private static ExpMonomial findExpKey(Map<Monomial, Number> ansMap) {
-        ExpMonomial found = null;
-        for (Monomial k : ansMap.keySet()) {
-            if (k instanceof ExpMonomial) {
-                found = (ExpMonomial) k;
+    private static void mergeAlge(Map<VarAtom, Number> base,
+                                  Map<VarAtom, Number> other) {
+        other.forEach((k, v) -> { // lambda表达式 代替 增强for循环
+            base.merge(k, v, Number::add);
+            if (base.get(k).equal(0)) {
+                base.remove(k);
+            }
+        });
+    }
+
+    private static void mergeTrans(Map<TranscenAtom, Number> base,
+                                   Map<TranscenAtom, Number> other) {
+        for (Map.Entry<TranscenAtom, Number> entry : other.entrySet()) {
+            if (entry.getKey() instanceof ExpAtom) {
+                ExpAtom found = findExpKey(base);
+                if (found != null) {
+                    base.remove(found);
+                    Expression newInner = Expression.add(
+                            found.getInner(), entry.getKey().getInner());
+                    if (!newInner.isZero()) {
+                        base.put(ElementFactory.newExpKey(newInner), Number.ONE);
+                    }
+                } else {
+                    base.put(entry.getKey(), Number.ONE);
+                }
+            } else {
+                throw new IllegalArgumentException("TermSign合并transMap时出错");
+            }
+        }
+    }
+
+    private static ExpAtom findExpKey(Map<TranscenAtom, Number> ansMap) {
+        ExpAtom found = null;
+        for (TranscenAtom k : ansMap.keySet()) {
+            if (k instanceof ExpAtom) {
+                found = (ExpAtom) k;
                 break;
             }
         }
@@ -77,55 +90,61 @@ public class TermSign {
         } else if (o == null || getClass() != o.getClass()) { //类不同
             return false;
         }
-        return Objects.equals(map, ((TermSign) o).map);   //类相同
+        return Objects.equals(algeMap, ((TermSign) o).algeMap)
+                && Objects.equals(transcenMap, ((TermSign) o).transcenMap);   //类相同
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(map);
+        return Objects.hash(algeMap) + Objects.hash(transcenMap);
     }
 
     /*-----对外方法-----*/
 
-    public Expression substitute(String varName, Expression arg) {
-        //将该TermKey中的元 varName 替换成 arg
-        Expression result = ElementFactory.newFactor(BigInteger.ONE).toExpression(); // 从1开始连乘
-
-        for (Map.Entry<Monomial, Number> entry : map.entrySet()) {
-            Monomial key = entry.getKey();
+    public Expression substitute(String varName, Expression arg) { // 将该TermKey中的元 varName 替换成 arg
+        Expression result = ElementFactory.newConstExpr(
+                ElementFactory.newNumber(1)); // 从1开始连乘
+        for (Map.Entry<VarAtom, Number> entry : algeMap.entrySet()) { // 代入代数侧
+            VarAtom var = entry.getKey();
             Number power = entry.getValue();
-
-            if (key instanceof VarMonomial) {
-                //对多项式部分，x^n -> arg^n，
-                if (((VarMonomial) key).getName().equals(varName)) {
+            if (var != null) {
+                if (var.getName().equals(varName)) { // 对多项式部分:var^n -> arg^n
                     result = Expression.mult(result, Expression.pow(arg, power));
-                } else { // 其他变量名的VarKey，原样保留,result *= keep
-                    Expression keep;
-                    Factor f = ElementFactory.newFactor(((VarMonomial) key).getName());
-                    keep = Expression.pow(f.toExpression(), power);
-                    result = Expression.mult(result, keep);
+                } else { // 其他变量名的VarAtom-power，原样保留,result *= var^power
+                    result = Expression.mult(result, var.toExpr(power));
                 }
-            } else if (key instanceof ExpMonomial) {
-                // 对ExpKey的inner也需要substitute
-                Expression newExpKey;
-                Expression newInner = ((ExpMonomial) key).getInner().
-                        substitute(varName, arg); //代入exp(inner)中的形参
-                newExpKey = ElementFactory.newExpExpr(newInner);
-                result = Expression.mult(result, newExpKey);
             } else {
-                throw new IllegalArgumentException("TermKey代入时出错");
+                throw new IllegalArgumentException("TermSign代入时出错");
+            }
+        }
+        for (Map.Entry<TranscenAtom, Number> entry : transcenMap.entrySet()) {
+            TranscenAtom key = entry.getKey();
+            Number power = entry.getValue();
+            if (key instanceof ExpAtom) { // 对Exp部分:arg代入inner，生成newExp,result *= newExp
+                result = Expression.mult(result,
+                        ElementFactory.newTransExpr(
+                                key.getInner().substitute(varName, arg)));
+            } else {
+                throw new IllegalArgumentException("TermSign代入时出错");
             }
         }
         return result;
     }
 
     public String toOutString() {
-        if (map.isEmpty()) {
+        if (algeMap.isEmpty() && transcenMap.isEmpty()) {
             return "";
         }
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
-        for (Map.Entry<Monomial, Number> entry : map.entrySet()) {
+        for (Map.Entry<VarAtom, Number> entry : algeMap.entrySet()) {
+            if (!isFirst) {
+                sb.append("*");
+            }
+            sb.append(entry.getKey().toOutString(entry.getValue()));
+            isFirst = false;
+        }
+        for (Map.Entry<TranscenAtom, Number> entry : transcenMap.entrySet()) {
             if (!isFirst) {
                 sb.append("*");
             }
@@ -136,11 +155,42 @@ public class TermSign {
     }
 
     public boolean isConst() {
-        return this.map.isEmpty(); // 该项没有非系数部分
+        return this.algeMap.isEmpty()
+                && this.transcenMap.isEmpty(); // 该项没有非系数部分
     }
 
     public boolean isFactor() {
-        return (this.map.size() == 1); // 该项的非系数部分只有一个
+        return (this.algeMap.size() + this.transcenMap.size() == 1); // 该项的非系数部分只有一个
+    }
+
+    public Expression derive(String var) { // 对单项式求导 -> 对第i个因子求导，执行size次，
+        if(isConst()) {
+            return ElementFactory.newConstExpr(
+                    ElementFactory.newNumber(1));
+        }
+
+        Expression ans = ElementFactory.newSpaceExpr();
+        List<Map.Entry<? extends Atom, Number>> entries = new ArrayList<>();
+        entries.addAll(algeMap.entrySet());
+        entries.addAll(transcenMap.entrySet());
+        for (int i = 0; i < entries.size(); i++) {
+            Atom atom = entries.get(i).getKey();
+            Number exponent = entries.get(i).getValue();
+            Expression derivative = atom.derive(var, exponent);
+            if (derivative.isZero()) {
+                continue;
+            }
+            Expression term = ElementFactory.newConstExpr(
+                    ElementFactory.newNumber(1));
+            for (int j = 0; j < entries.size(); j++) {
+                if (i != j) {
+                    term = Expression.mult(term,
+                            entries.get(j).getKey().toExpr(entries.get(j).getValue()));
+                }
+            }
+            ans = Expression.add(ans, Expression.mult(derivative, term));
+        }
+        return ans;
     }
 
 }
