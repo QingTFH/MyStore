@@ -9,13 +9,13 @@ public class Expression extends Element {
      *  存若干个项，如果项内名称和幂次都相同(即TermKey相同)则合并
      *  统一使用Expression做计算，Factor只作提取因子用
      */
-    private final Map<TermSign, Number> keyMap; // <项签名TermSign -> 该项系数>
+    private final Map<TermSign, mNumber> keyMap; // <项签名TermSign -> 该项系数>
 
     Expression() {
         this.keyMap = new HashMap<>();
     }
 
-    Expression(TermSign term, Number coe) {
+    Expression(TermSign term, mNumber coe) {
         this.keyMap = new HashMap<>();
         keyMap.put(term, coe);
     }
@@ -43,7 +43,7 @@ public class Expression extends Element {
     public Expression substitute(String varName, Expression arg) {
         //将该Expr的元varName 由 arg 代入
         Expression result = new Expression();
-        for (Map.Entry<TermSign, Number> entry : keyMap.entrySet()) {
+        for (Map.Entry<TermSign, mNumber> entry : keyMap.entrySet()) {
             Expression term = entry.getKey().
                     substitute(varName, arg); // 对这一项的TermSign进行代入
             term = Expression.mult(term,
@@ -55,7 +55,7 @@ public class Expression extends Element {
     }
 
     public Expression derive(String var) { //对一个多项式求导 -> 对每一项求导、结果乘以系数、再相加
-        Expression ans = ElementFactory.newSpaceExpr();
+        Expression ans = ElementFactory.newConstExpr(ElementFactory.newNumber(0));
         for (TermSign entry : this.keyMap.keySet()) {
             ans = Expression.add(ans,
                     Expression.mult(
@@ -71,14 +71,14 @@ public class Expression extends Element {
         return this;
     }
 
-    public Number toNumber() {
+    public mNumber toNumber() {
         if (keyMap.isEmpty()) {
-            return Number.ZERO;
+            return mNumber.ZERO;
         }
         if (keyMap.size() != 1) {
             throw new RuntimeException("表达式中项不唯一，无法转换为Number");
         }
-        Map.Entry<TermSign, Number> entry = keyMap.entrySet().iterator().next();
+        Map.Entry<TermSign, mNumber> entry = keyMap.entrySet().iterator().next();
         if (!entry.getKey().isConst()) {
             throw new RuntimeException("表达式是变元项，无法转换为Number");
         }
@@ -103,9 +103,9 @@ public class Expression extends Element {
 
     /*---------内部工具----------*/
 
-    private void mergeTerm(TermSign key, Number coe) { //合并<key -> coe>
+    private void mergeTerm(TermSign key, mNumber coe) { //合并<key -> coe>
         if (!coe.equal(0)) {
-            this.keyMap.merge(key, coe, Number::add);
+            this.keyMap.merge(key, coe, mNumber::add);
             if (this.keyMap.get(key).equal(0)) {
                 this.keyMap.remove(key);
             }
@@ -114,10 +114,10 @@ public class Expression extends Element {
 
     private String TermToString(TermSign key) { //项 -> String
         StringBuilder sb = new StringBuilder();
-        Number coe = keyMap.get(key); //该项的系数
-        Number coeAbs = coe.abs();
+        mNumber coe = keyMap.get(key); //该项的系数
+        mNumber coeAbs = coe.abs();
         //打印符号
-        if (!coe.gt(Number.ZERO)) { //coe<0
+        if (!coe.gt(mNumber.ZERO)) { //coe<0
             sb.append("-");
         } else { //coe>0
             sb.append("+");
@@ -159,10 +159,10 @@ public class Expression extends Element {
     public static Expression mult(Expression m1, Expression m2) {
         Expression ans = new Expression();
         for (TermSign key1 : m1.keyMap.keySet()) { //key1 = m1的项
-            Number coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
+            mNumber coe1 = m1.keyMap.get(key1); //coe1 = m1的项的系数
             for (TermSign key2 : m2.keyMap.keySet()) { //key2 = m2的项
-                Number coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
-                Number ansCoe = Number.mult(coe1, coe2); //ansCoe = coe1 * coe2
+                mNumber coe2 = m2.keyMap.get(key2); //coe2 = m2的项的系数
+                mNumber ansCoe = mNumber.mult(coe1, coe2); //ansCoe = coe1 * coe2
                 TermSign ansKey = TermSign.mult(key1, key2); //ansKey = key1 * key2
                 //ans += ansCoe * ansKey
                 ans.mergeTerm(ansKey, ansCoe);
@@ -171,13 +171,13 @@ public class Expression extends Element {
         return ans;
     }
 
-    public static Expression pow(Expression base, Number exp) {
+    public static Expression pow(Expression base, mNumber exp) {
         Expression ans = ElementFactory.newSpaceExpr();
-        ans.mergeTerm(ElementFactory.newSpaceTermSign(), Number.ONE); // ans = 1
+        ans.mergeTerm(ElementFactory.newSpaceTermSign(), mNumber.ONE); // ans = 1
         if (exp.equal(0)) {
             return ans;
         }
-        for (Number i = Number.ZERO; i.compareTo(exp) < 0; i = Number.add(i, Number.ONE)) {
+        for (mNumber i = mNumber.ZERO; i.compareTo(exp) < 0; i = mNumber.add(i, mNumber.ONE)) {
             ans = Expression.mult(ans, base);
         }
         return ans;

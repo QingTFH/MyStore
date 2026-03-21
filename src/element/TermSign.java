@@ -17,11 +17,11 @@ public class TermSign {
      *   x^7 * y^2 * exp(inner)
      */
 
-    private final Map<VarAtom, Number> algeMap; // <项中代数子的name -> 次数>
-    private final Map<TranscenAtom, Number> transcenMap; // <项中超越子的key -> 次数>
+    private final Map<VarAtom, mNumber> algeMap; // <项中代数子的name -> 次数>
+    private final Map<TranscenAtom, mNumber> transcenMap; // <项中超越子的key -> 次数>
 
-    TermSign(Map<VarAtom, Number> algeMap,
-             Map<TranscenAtom, Number> transcenMap) { // 包级访问
+    TermSign(Map<VarAtom, mNumber> algeMap,
+             Map<TranscenAtom, mNumber> transcenMap) { // 包级访问
         this.algeMap = new HashMap<>(algeMap);
         this.transcenMap = new HashMap<>(transcenMap);
     }
@@ -39,19 +39,19 @@ public class TermSign {
         return ans;
     }
 
-    private static void mergeAlge(Map<VarAtom, Number> base,
-                                  Map<VarAtom, Number> other) {
+    private static void mergeAlge(Map<VarAtom, mNumber> base,
+                                  Map<VarAtom, mNumber> other) {
         other.forEach((k, v) -> { // lambda表达式 代替 增强for循环
-            base.merge(k, v, Number::add);
+            base.merge(k, v, mNumber::add);
             if (base.get(k).equal(0)) {
                 base.remove(k);
             }
         });
     }
 
-    private static void mergeTrans(Map<TranscenAtom, Number> base,
-                                   Map<TranscenAtom, Number> other) {
-        for (Map.Entry<TranscenAtom, Number> entry : other.entrySet()) {
+    private static void mergeTrans(Map<TranscenAtom, mNumber> base,
+                                   Map<TranscenAtom, mNumber> other) {
+        for (Map.Entry<TranscenAtom, mNumber> entry : other.entrySet()) {
             if (entry.getKey() instanceof ExpAtom) {
                 ExpAtom found = findExpKey(base);
                 if (found != null) {
@@ -59,10 +59,10 @@ public class TermSign {
                     Expression newInner = Expression.add(
                             found.getInner(), entry.getKey().getInner());
                     if (!newInner.isZero()) {
-                        base.put(ElementFactory.newExpKey(newInner), Number.ONE);
+                        base.put(ElementFactory.newExpKey(newInner), mNumber.ONE);
                     }
                 } else {
-                    base.put(entry.getKey(), Number.ONE);
+                    base.put(entry.getKey(), mNumber.ONE);
                 }
             } else {
                 throw new IllegalArgumentException("TermSign合并transMap时出错");
@@ -70,7 +70,7 @@ public class TermSign {
         }
     }
 
-    private static ExpAtom findExpKey(Map<TranscenAtom, Number> ansMap) {
+    private static ExpAtom findExpKey(Map<TranscenAtom, mNumber> ansMap) {
         ExpAtom found = null;
         for (TranscenAtom k : ansMap.keySet()) {
             if (k instanceof ExpAtom) {
@@ -104,9 +104,9 @@ public class TermSign {
     public Expression substitute(String varName, Expression arg) { // 将该TermKey中的元 varName 替换成 arg
         Expression result = ElementFactory.newConstExpr(
                 ElementFactory.newNumber(1)); // 从1开始连乘
-        for (Map.Entry<VarAtom, Number> entry : algeMap.entrySet()) { // 代入代数侧
+        for (Map.Entry<VarAtom, mNumber> entry : algeMap.entrySet()) { // 代入代数侧
             VarAtom var = entry.getKey();
-            Number power = entry.getValue();
+            mNumber power = entry.getValue();
             if (var != null) {
                 if (var.getName().equals(varName)) { // 对多项式部分:var^n -> arg^n
                     result = Expression.mult(result, Expression.pow(arg, power));
@@ -117,9 +117,8 @@ public class TermSign {
                 throw new IllegalArgumentException("TermSign代入时出错");
             }
         }
-        for (Map.Entry<TranscenAtom, Number> entry : transcenMap.entrySet()) {
+        for (Map.Entry<TranscenAtom, mNumber> entry : transcenMap.entrySet()) {
             TranscenAtom key = entry.getKey();
-            Number power = entry.getValue();
             if (key instanceof ExpAtom) { // 对Exp部分:arg代入inner，生成newExp,result *= newExp
                 result = Expression.mult(result,
                         ElementFactory.newTransExpr(
@@ -137,14 +136,14 @@ public class TermSign {
         }
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
-        for (Map.Entry<VarAtom, Number> entry : algeMap.entrySet()) {
+        for (Map.Entry<VarAtom, mNumber> entry : algeMap.entrySet()) {
             if (!isFirst) {
                 sb.append("*");
             }
             sb.append(entry.getKey().toOutString(entry.getValue()));
             isFirst = false;
         }
-        for (Map.Entry<TranscenAtom, Number> entry : transcenMap.entrySet()) {
+        for (Map.Entry<TranscenAtom, mNumber> entry : transcenMap.entrySet()) {
             if (!isFirst) {
                 sb.append("*");
             }
@@ -166,16 +165,16 @@ public class TermSign {
     public Expression derive(String var) { // 对单项式求导 -> 对第i个因子求导，执行size次，
         if(isConst()) {
             return ElementFactory.newConstExpr(
-                    ElementFactory.newNumber(1));
+                    ElementFactory.newNumber(0));
         }
 
         Expression ans = ElementFactory.newSpaceExpr();
-        List<Map.Entry<? extends Atom, Number>> entries = new ArrayList<>();
+        List<Map.Entry<? extends Atom, mNumber>> entries = new ArrayList<>();
         entries.addAll(algeMap.entrySet());
         entries.addAll(transcenMap.entrySet());
         for (int i = 0; i < entries.size(); i++) {
             Atom atom = entries.get(i).getKey();
-            Number exponent = entries.get(i).getValue();
+            mNumber exponent = entries.get(i).getValue();
             Expression derivative = atom.derive(var, exponent);
             if (derivative.isZero()) {
                 continue;

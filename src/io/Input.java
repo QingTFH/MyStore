@@ -16,9 +16,20 @@ public class Input {
         Parser parser = Parser.getParser();
         int n = Integer.parseInt(scanner.nextLine());
 
-        for (int i = 0; i < n; i++) { // 构建map，<函数名 -> 表达式>
+        for (int i = 0; i < n; i++) { // 读取非递归函数
             parser.setLexer(new Lexer(InputLine()));
             parser.parseFuncDef();
+        }
+
+        int m = Integer.parseInt(scanner.nextLine());
+
+        for (int i = 0; i < m; i++) { // 读取递归函数
+            for(int j=0;j<2;j++) {
+                parser.setLexer(new Lexer(InputLine()));
+                parser.parseRecuFuncDefO();
+            }
+            parser.setLexer(new Lexer(InputLine()));
+            parser.parseRecuFuncDefN();
         }
     }
 

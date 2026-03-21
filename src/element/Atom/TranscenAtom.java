@@ -1,7 +1,6 @@
 package element.Atom;
 
 import element.Expression;
-import element.Number;
 
 public abstract class TranscenAtom implements Atom{
     private final Expression inner;

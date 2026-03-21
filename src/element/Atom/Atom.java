@@ -1,7 +1,7 @@
 package element.Atom;
 
 import element.Expression;
-import element.Number;
+import element.mNumber;
 
 public interface Atom {
     @Override
@@ -10,9 +10,9 @@ public interface Atom {
     @Override
     int hashCode();
 
-    String toOutString(Number power);
+    String toOutString(mNumber power);
 
-    Expression derive(String var,Number exponent);
+    Expression derive(String var, mNumber exponent);
 
-    Expression toExpr(Number power);
+    Expression toExpr(mNumber power);
 }

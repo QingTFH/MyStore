@@ -16,11 +16,11 @@ public class ElementFactory {
         return new Expression();
     }
 
-    public static Expression newConstExpr(Number coe) { // Expr = coe + 0
+    public static Expression newConstExpr(mNumber coe) { // Expr = coe + 0
         return new Expression(newSpaceTermSign(),coe);
     }
 
-    public static Expression newVarExpr(String varName, Number power) { // Expr = var^power + 0
+    public static Expression newVarExpr(String varName, mNumber power) { // Expr = var^power + 0
         return new Expression(newAlgeTermSign(varName,power),newNumber(1));
     }
 
@@ -37,14 +37,14 @@ public class ElementFactory {
         return new TermSign(new HashMap<>(),new HashMap<>());
     }
 
-    public static TermSign newAlgeTermSign(String varName,Number power) {
-        Map<VarAtom, Number> algeMap = new HashMap<>();
+    public static TermSign newAlgeTermSign(String varName, mNumber power) {
+        Map<VarAtom, mNumber> algeMap = new HashMap<>();
         algeMap.put(newVarKey(varName),power);
         return new TermSign(algeMap,new HashMap<>());
     }
 
     public static TermSign newTransTermSign(Expression inner) {
-        Map<TranscenAtom,Number> transMap = new HashMap<>();
+        Map<TranscenAtom, mNumber> transMap = new HashMap<>();
         transMap.put(newExpKey(inner),newNumber(1));
         return new TermSign(new HashMap<>(),transMap);
     }
@@ -64,19 +64,19 @@ public class ElementFactory {
 
     /*-----Number-----*/
 
-    public static Number newNumber(BigInteger num) {
-        return new Number(num);
+    public static mNumber newNumber(BigInteger num) {
+        return new mNumber(num);
     }
 
-    public static Number newNumber(String num) {
+    public static mNumber newNumber(String num) {
         if (!num.matches("^[+-]?[0-9]+$")) {
             throw new IllegalArgumentException("生成Number时，初始化使用错误的String:" + num);
         }
-        return new Number(new BigInteger(num));
+        return new mNumber(new BigInteger(num));
     }
 
-    public static Number newNumber(int num) {
-        return new Number(BigInteger.valueOf(num));
+    public static mNumber newNumber(int num) {
+        return new mNumber(BigInteger.valueOf(num));
     }
 
 }
