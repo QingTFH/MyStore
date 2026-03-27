@@ -261,11 +261,12 @@ public class Parser {
 
         //推导式extra
         Expression extra = ElementFactory.newSpaceExpr();
-        if (!lexer.peek().isEmpty()) { // 有extra
+        while (!lexer.peek().isEmpty()) { // 有extra , bug:整个extra当Term处理了，实则是表达式
             Expression sign2 = ElementFactory.newConstExpr(
                     ElementFactory.newNumber(lexer.peek().equals("-") ? -1 : 1));
             lexer.next(); //消费+|-
-            extra = Expression.mult(sign2, parseExpr());
+            extra = Expression.add(extra,
+                    Expression.mult(sign2, parseTerm()));
         }
 
         recuFunc.setOther(coe1, coe2, arg1, arg2, extra);
@@ -322,9 +323,12 @@ public class Parser {
     }
 
     private void skipExponent() {
-        //消费"^Number"
+        //消费"^[+|-]Number"
         if (Objects.equals(lexer.peek(), "^")) {
             lexer.next(); // 消费 "^"
+            if (isPlusOrSub(lexer.peek())) { // 指数带符号
+                lexer.next(); // 消费符号
+            }
             lexer.next(); // 消费 指数数字
         }
     }
