@@ -212,15 +212,18 @@ public class Elevator implements Runnable {
     }
 
     public void addInTask(PersonRequest request) throws InterruptedException {
+        // 唯一与外界交互的方法
         int fromFloor = Config.changeStringToFloor(request.getFromFloor());
         synchronized (lock) {
             List<PersonRequest> list = inTask.get(fromFloor);
             list.add(request);
+
             targetFloor.add(fromFloor);
+            Output.printReceive(request.getPersonId(), id);
 
             lock.notifyAll(); // 唤醒等待任务的电梯线程
         }
-        Output.printReceive(request.getPersonId(), id);
+
     }
 
     private void goIn() {
