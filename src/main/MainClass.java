@@ -22,13 +22,13 @@ public class MainClass {
         Thread input = new Thread(new Input(taskQueue)); // 初始化输入线程
 
         List<Elevator> elevators = new ArrayList<>(Config.ELEVATOR_NUM); // 初始化电梯组、启动对应线程
-        for(int i=0;i<Config.ELEVATOR_NUM;i++) {
-            Elevator elevator = new Elevator(i+1);
+        for (int i = 0; i < Config.ELEVATOR_NUM; i++) {
+            Elevator elevator = new Elevator(i + 1);
             elevators.add(elevator);
             new Thread(elevator).start();
         }
 
-        new Thread(new Scheduler(taskQueue,elevators)).start(); // 初始化调度系统
+        new Thread(new Scheduler(taskQueue, elevators)).start(); // 初始化调度系统
 
         input.start(); // 启动输入线程，开始操作。
     }
