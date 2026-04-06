@@ -3,7 +3,7 @@ package main;
 import com.oocourse.elevator1.PersonRequest;
 import com.oocourse.elevator1.TimableOutput;
 import io.Input;
-import tools.Elevator;
+import elevator.Elevator;
 import tools.Scheduler;
 
 import java.util.ArrayList;

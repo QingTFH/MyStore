@@ -12,6 +12,9 @@ public class Config {
 
     private static volatile boolean inputFinished = false;
     private static volatile boolean scheduleFinished = false;
+    public enum Direction {
+        UP, DOWN, NULL
+    }
 
     public static int changeStringToFloor(String a) { // -3~7
         int x;

@@ -1,6 +1,7 @@
 package tools;
 
 import com.oocourse.elevator1.PersonRequest;
+import elevator.Elevator;
 import main.Config;
 
 import java.util.List;
@@ -27,10 +28,9 @@ public class Scheduler implements Runnable {
                 if (taskQueue.isEmpty()
                         && Config.isInputFinished()) { // 任务结束
                     Config.scheduleFinished();
-                    //System.out.println("scheduler end");
                     for (Elevator e : elevators) {
-                        synchronized (e.getLock()) {
-                            e.getLock().notifyAll();
+                        synchronized (e.getTask()) {
+                            e.getTask().notifyAll();
                         }
                     }
 
@@ -45,7 +45,7 @@ public class Scheduler implements Runnable {
                 //分派任务
                 int id = request.getElevatorId();
                 Elevator elevator = elevators.get(id - 1); // 位置在id-1
-                elevator.addInTask(request);
+                elevator.addTask(request);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
