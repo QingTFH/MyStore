@@ -15,7 +15,8 @@ public class Elevator implements Runnable {
     private static final boolean DOOR_OPENED = true;
 
     private final int id;
-    private Integer curFloor = Config.ELEVATOR_INITIAL_POS; // -4~-1 1~7 共7层 -> 压缩至-3~7 其中-3~0分别表示-4~-1层
+    private Integer curFloor = Config.ELEVATOR_INITIAL_POS;
+    // -4~-1 1~7 共7层 -> 压缩至-3~7 其中-3~0分别表示-4~-1层
     private Direction direction = Direction.NULL;
     private boolean door = DOOR_CLOSED;
     private long openTime;
@@ -33,7 +34,7 @@ public class Elevator implements Runnable {
                 // 如果目前没有任务了,等待任务
                 waitForTask();
 
-                if(isEnd()) {
+                if (isEnd()) {
                     break;
                 }
 
@@ -76,7 +77,7 @@ public class Elevator implements Runnable {
     }
 
     private void openDoor() {
-        if(door == DOOR_OPENED) {
+        if (door == DOOR_OPENED) {
             return;
         }
         door = DOOR_OPENED;
@@ -85,7 +86,7 @@ public class Elevator implements Runnable {
     }
 
     private void closeDoor() throws InterruptedException {
-        if(door == DOOR_CLOSED) {
+        if (door == DOOR_CLOSED) {
             return;
         }
         // 补足时间
@@ -98,7 +99,7 @@ public class Elevator implements Runnable {
     }
 
     private void setDirection() {
-        direction = task.decideNextDirection(curFloor,direction);
+        direction = task.decideNextDirection(curFloor, direction);
     }
 
     private boolean isEnd() {

@@ -12,6 +12,7 @@ public class Config {
 
     private static volatile boolean inputFinished = false;
     private static volatile boolean scheduleFinished = false;
+
     public enum Direction {
         UP, DOWN, NULL
     }

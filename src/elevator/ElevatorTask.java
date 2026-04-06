@@ -35,8 +35,8 @@ public class ElevatorTask {
         elevatorId = id;
         //初始化map中的list,防止null
         for (int i = Config.ELEVATOR_FLOOR_MIN;
-            i <= Config.ELEVATOR_FLOOR_MAX;
-            i++) {
+             i <= Config.ELEVATOR_FLOOR_MAX;
+             i++) {
             List<PersonRequest> inList = new ArrayList<>();
             inTask.put(i, inList);
             List<PersonRequest> outList = new ArrayList<>();
@@ -51,12 +51,12 @@ public class ElevatorTask {
         //处理离开请求
         goOut(floor);
         //处理进入请求: 只接受当前运动方向上的进入请求
-        goIn(floor,direction);
+        goIn(floor, direction);
         //刷新target
         refreshTargetFloor();
     }
 
-    private void goIn(int floor,Direction direction) {
+    private void goIn(int floor, Direction direction) {
         /* 处理当前楼层的进入请求,更新重量 */
         // 检查这个楼层是否有进入请求
         List<PersonRequest> list = inTask.get(floor);
@@ -73,7 +73,7 @@ public class ElevatorTask {
             int to = Config.changeStringToFloor(request.getToFloor());
             int from = Config.changeStringToFloor(request.getFromFloor());
             Direction requestDir = to > from ? Direction.UP : Direction.DOWN;
-            if(direction != Direction.NULL
+            if (direction != Direction.NULL
                     && requestDir != direction) {
                 continue;
             }
@@ -81,7 +81,7 @@ public class ElevatorTask {
                 continue;
             }
             //合法：进入电梯
-            singleGoIn(request,floor);
+            singleGoIn(request, floor);
         }
     }
 
@@ -105,7 +105,7 @@ public class ElevatorTask {
         // 有：离开电梯、输出
         List<PersonRequest> copy = new ArrayList<>(list);
         for (PersonRequest request : copy) {
-            singleGoOut(request,floor);
+            singleGoOut(request, floor);
         }
     }
 
@@ -126,7 +126,7 @@ public class ElevatorTask {
 
     public synchronized void receiveTask() {
         /* receive所有任务, 加入inTask队列, 输出 */
-        while(!task.isEmpty()) {
+        while (!task.isEmpty()) {
             PersonRequest request = task.poll();
             int floor = Config.changeStringToFloor(request.getFromFloor());
             inTask.get(floor).add(request);
@@ -199,11 +199,11 @@ public class ElevatorTask {
 
     public synchronized Direction decideNextDirection(int curFloor, Direction curDir) {
         /* 根据当前楼层、当前方向和targetFloor, 确定下一次运行的方向 */
-        Integer up = targetFloor.ceiling(curFloor+1);
-        Integer down = targetFloor.floor(curFloor-1);
+        Integer up = targetFloor.ceiling(curFloor + 1);
+        Integer down = targetFloor.floor(curFloor - 1);
 
         // 无目标：空闲
-        if(up == null && down == null) {
+        if (up == null && down == null) {
             return Direction.NULL;
         }
 
@@ -220,10 +220,10 @@ public class ElevatorTask {
         }
 
         // 当前方向不为空：转向/保持
-        if(curDir == Direction.UP && up == null) {
+        if (curDir == Direction.UP && up == null) {
             return Direction.DOWN;
         }
-        if(curDir == Direction.DOWN && down == null){
+        if (curDir == Direction.DOWN && down == null) {
             return Direction.UP;
         }
         return curDir; // 保持
