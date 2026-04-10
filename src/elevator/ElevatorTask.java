@@ -207,7 +207,7 @@ public class ElevatorTask {
         Integer down = targetFloor.floor(curFloor - 1);
 
         // 无目标：空闲
-        if (up == null && down == null && !haveUp(curFloor) && !haveDown(curFloor)) {
+        if (up == null && down == null) {
             return Direction.NULL;
         }
 
