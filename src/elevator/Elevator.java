@@ -39,8 +39,8 @@ public class Elevator implements Runnable {
                 }
 
                 // 否则：处理请求->移动楼层
-                process(); // 处理本楼层的请求
                 setDirection();
+                process(); // 处理本楼层的请求
                 move(); // 移动一个楼层
 
             } catch (InterruptedException e) {

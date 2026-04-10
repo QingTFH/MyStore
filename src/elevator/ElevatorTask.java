@@ -70,9 +70,7 @@ public class ElevatorTask {
         for (PersonRequest request : copy) {
             // 1. 需求的移动方向是否与当前运动方向相同 (如果电梯空闲，则可任意接受)
             // 2. 进入后体重是否合法
-            int to = Config.changeStringToFloor(request.getToFloor());
-            int from = Config.changeStringToFloor(request.getFromFloor());
-            Direction requestDir = to > from ? Direction.UP : Direction.DOWN;
+            Direction requestDir = getRequestDir(request);
             if (direction != Direction.NULL
                     && requestDir != direction) {
                 continue;
@@ -83,6 +81,12 @@ public class ElevatorTask {
             //合法：进入电梯
             singleGoIn(request, floor);
         }
+    }
+
+    private Direction getRequestDir(PersonRequest request) {
+        int to = Config.changeStringToFloor(request.getToFloor());
+        int from = Config.changeStringToFloor(request.getFromFloor());
+        return to > from ? Direction.UP : Direction.DOWN;
     }
 
     private void singleGoIn(PersonRequest request, int floor) {
@@ -203,7 +207,7 @@ public class ElevatorTask {
         Integer down = targetFloor.floor(curFloor - 1);
 
         // 无目标：空闲
-        if (up == null && down == null) {
+        if (up == null && down == null && !haveUp(curFloor) && !haveDown(curFloor)) {
             return Direction.NULL;
         }
 
@@ -220,13 +224,34 @@ public class ElevatorTask {
         }
 
         // 当前方向不为空：转向/保持
-        if (curDir == Direction.UP && up == null) {
+        // 转向：当前方向上没有任务：targetFloor和当前楼层的请求都没有
+        if (curDir == Direction.UP && up == null && !haveUp(curFloor)) {
             return Direction.DOWN;
         }
-        if (curDir == Direction.DOWN && down == null) {
+        if (curDir == Direction.DOWN && down == null && !haveDown(curFloor)) {
             return Direction.UP;
         }
         return curDir; // 保持
+    }
+
+    private synchronized boolean haveUp(int curFloor) {
+        /* 判断当前楼层是否有up请求 */
+        for (PersonRequest request : inTask.get(curFloor)) {
+            if (getRequestDir(request) == Direction.UP) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private synchronized boolean haveDown(int curFloor) {
+        /* 判断当前楼层是否有down请求 */
+        for (PersonRequest request : inTask.get(curFloor)) {
+            if (getRequestDir(request) == Direction.DOWN) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public synchronized boolean isTarget(int floor) {
