@@ -39,8 +39,8 @@ public class Elevator implements Runnable {
                 }
 
                 // 否则：处理请求->移动楼层
-                setDirection();
                 process(); // 处理本楼层的请求
+                setDirection();
                 move(); // 移动一个楼层
 
             } catch (InterruptedException e) {
@@ -74,6 +74,9 @@ public class Elevator implements Runnable {
         Thread.sleep(Config.ELEVATOR_MOVE_TIME); // 移动一层要0.4s,对应sleep(400)
         curFloor += direction == Direction.UP ? 1 : -1;
         Output.printArrive(curFloor, id); // 先消耗时间，再到位
+        if (curFloor == Config.ELEVATOR_FLOOR_MIN || curFloor == Config.ELEVATOR_FLOOR_MAX) {
+            direction = Direction.NULL;
+        }
     }
 
     private void openDoor() {
