@@ -1,37 +1,42 @@
 package elevator;
 
-import com.oocourse.elevator1.PersonRequest;
+import com.oocourse.elevator2.MaintRequest;
+import com.oocourse.elevator2.PersonRequest;
 import io.Output;
 import main.Config;
 import main.Config.Direction;
+import main.Shared;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class ElevatorTask {
-    /*
-     * 一个电梯内部的任务管理器, 处理该电梯所有任务逻辑
-     * 需要处理"每一层的请求"、处理请求后调度运行方向
-     */
+    /*一个电梯内部的任务管理器, 处理该电梯所有任务逻辑需要处理"每一层的请求"、处理请求后调度运行方向*/
+    /* 除电梯线程外, 其他线程需要读写：task(写)、targetFloor(读) */
 
-    private final BlockingQueue<PersonRequest> task = new LinkedBlockingQueue<>();
-
-    private final HashMap<Integer, List<PersonRequest>> inTask
-            = new HashMap<>(); // 申请进入电梯的任务
-    private final HashMap<Integer, List<PersonRequest>> outTask
-            = new HashMap<>(); // 申请离开电梯的任务
+    private final BlockingQueue<PersonRequest> task =
+            new LinkedBlockingQueue<>(); // 缓存队列，分配了但还没receive的任务
+    private final HashMap<Integer, List<PersonRequest>> inTask =
+            new HashMap<>(); // 申请进入电梯的任务
+    private final HashMap<Integer, List<PersonRequest>> outTask =
+            new HashMap<>(); // 申请离开电梯的任务
     private final TreeSet<Integer> targetFloor = new TreeSet<>();
 
     private final int elevatorId;
     private int weight = 0;
 
+    private volatile boolean maintainFlag = false;
+
+    private volatile boolean spaceFlag = true;
+
     // 目标楼层,包含：inTask的“From楼层” 和 outTask的"To楼层"
 
-    public ElevatorTask(int id) {
+    ElevatorTask(int id) {
         elevatorId = id;
         //初始化map中的list,防止null
         for (int i = Config.ELEVATOR_FLOOR_MIN;
@@ -46,18 +51,21 @@ public class ElevatorTask {
 
     /* ----- 处理请求逻辑 ----- */
 
-    public synchronized void process(int floor, Direction direction) {
+    synchronized void process(int floor, Direction direction) {
         /* 处理当前楼层的所有进出请求,更新重量,刷新target */
         //处理离开请求
         goOut(floor);
         //处理进入请求: 只接受当前运动方向上的进入请求
         goIn(floor, direction);
         //刷新target
-        refreshTargetFloor();
     }
 
     private void goIn(int floor, Direction direction) {
         /* 处理当前楼层的进入请求,更新重量 */
+        // 检修中, 跳过
+        if (maintainFlag) {
+            return;
+        }
         // 检查这个楼层是否有进入请求
         List<PersonRequest> list = inTask.get(floor);
 
@@ -81,12 +89,6 @@ public class ElevatorTask {
             //合法：进入电梯
             singleGoIn(request, floor);
         }
-    }
-
-    private Direction getRequestDir(PersonRequest request) {
-        int to = Config.changeStringToFloor(request.getToFloor());
-        int from = Config.changeStringToFloor(request.getFromFloor());
-        return to > from ? Direction.UP : Direction.DOWN;
     }
 
     private void singleGoIn(PersonRequest request, int floor) {
@@ -115,29 +117,29 @@ public class ElevatorTask {
 
     private void singleGoOut(PersonRequest request, int floor) {
         /* 完成outTask, 更新重量, 输出 */
-        finishRequest(request);
         weight -= request.getWeight();
-        Output.printGoOut(request.getPersonId(), floor, elevatorId);
+        finishRequest(request);
+        Output.printGoOutS(request.getPersonId(), floor, elevatorId);
     }
 
     /* ----- 任务分派逻辑 ----- */
 
-    public synchronized void addTask(PersonRequest request) {
+    synchronized void addTask(PersonRequest request) {
         /* 向任务列表中添加一个任务 request */
         task.add(request);
-        receiveTask(); // 目前直接receive即可
+        notifyAll();
     }
 
-    public synchronized void receiveTask() {
+    synchronized void receiveTask() {
         /* receive所有任务, 加入inTask队列, 输出 */
         while (!task.isEmpty()) {
             PersonRequest request = task.poll();
             int floor = Config.changeStringToFloor(request.getFromFloor());
             inTask.get(floor).add(request);
             Output.printReceive(request.getPersonId(), elevatorId);
-            refreshTargetSingleFloor(floor);
+
+            refreshSingleTargetFloor(floor);
         }
-        notifyAll();
     }
 
     private void changeTask(PersonRequest request) {
@@ -148,6 +150,9 @@ public class ElevatorTask {
         inList.remove(request);
         List<PersonRequest> outList = outTask.get(to);
         outList.add(request);
+
+        refreshSingleTargetFloor(to);
+        refreshSingleTargetFloor(from);
     }
 
     private void finishRequest(PersonRequest request) {
@@ -155,53 +160,48 @@ public class ElevatorTask {
         int to = Config.changeStringToFloor(request.getToFloor());
         List<PersonRequest> outList = outTask.get(to);
         outList.remove(request);
-    }
-
-    private boolean canAddWeight(int addWeight) {
-        return weight + addWeight <= Config.ELEVATOR_MAX_WEIGHT;
+        refreshSingleTargetFloor(to);
     }
 
     private void refreshTargetFloor() {
         /* 完全更新targetFloor */
         for (int i = Config.ELEVATOR_FLOOR_MIN;
              i <= Config.ELEVATOR_FLOOR_MAX; i++) {
-            refreshTargetSingleFloor(i);
+            refreshSingleTargetFloor(i);
         }
     }
 
-    private void refreshTargetSingleFloor(int floor) {
+    private void refreshSingleTargetFloor(int floor) {
         /* 单层更新targetFloor */
         // 检查inTask和outTask中该楼层的list是否为空
-        boolean space;
-        space = inTask.get(floor).isEmpty()
-                && outTask.get(floor).isEmpty();
-        if (space) { // 皆空：删除
+        if (inTask.get(floor).isEmpty()
+                && outTask.get(floor).isEmpty()) { // 皆空：删除
             targetFloor.remove(floor);
         } else { // 否则：加入
             targetFloor.add(floor);
         }
+
+        spaceFlag = targetFloor.isEmpty();
     }
 
-    public synchronized boolean isEnd() {
-        // 所有任务结束
-        refreshTargetFloor();
-        return weight == 0
+    synchronized void getTask() throws InterruptedException {
+        // 当前没有任务，没有可接收任务，不在检修中，等待；
+        // 有，receive
+
+        while (task.isEmpty()
                 && targetFloor.isEmpty()
-                && Config.isScheduleFinished();
-    }
-
-    synchronized void waitForTask() throws InterruptedException {
-        while (targetFloor.isEmpty()
-                && weight == 0
-                && !Config.isScheduleFinished()) {
+                && !Shared.getShared().isScheduleEnd()
+                && !maintainFlag) {
+            Shared.getShared().elevatorFinish();
             wait();
         }
-        refreshTargetFloor();
+
+        receiveTask();
     }
 
     /* ----- 运动调控逻辑 ----- */
 
-    public synchronized Direction decideNextDirection(int curFloor, Direction curDir) {
+    synchronized Direction decideNextDirection(int curFloor, Direction curDir) {
         /* 根据当前楼层、当前方向和targetFloor, 确定下一次运行的方向 */
         Integer up = targetFloor.ceiling(curFloor + 1);
         Integer down = targetFloor.floor(curFloor - 1);
@@ -234,7 +234,19 @@ public class ElevatorTask {
         return curDir; // 保持
     }
 
-    private synchronized boolean haveUp(int curFloor) {
+    /*----- 工具方法 -----*/
+
+    private boolean canAddWeight(int addWeight) {
+        return weight + addWeight <= Config.ELEVATOR_MAX_WEIGHT;
+    }
+
+    private Direction getRequestDir(PersonRequest request) {
+        int to = Config.changeStringToFloor(request.getToFloor());
+        int from = Config.changeStringToFloor(request.getFromFloor());
+        return to > from ? Direction.UP : Direction.DOWN;
+    }
+
+    private boolean haveUp(int curFloor) {
         /* 判断当前楼层是否有up请求 */
         for (PersonRequest request : inTask.get(curFloor)) {
             if (getRequestDir(request) == Direction.UP) {
@@ -244,7 +256,7 @@ public class ElevatorTask {
         return false;
     }
 
-    private synchronized boolean haveDown(int curFloor) {
+    private boolean haveDown(int curFloor) {
         /* 判断当前楼层是否有down请求 */
         for (PersonRequest request : inTask.get(curFloor)) {
             if (getRequestDir(request) == Direction.DOWN) {
@@ -254,8 +266,78 @@ public class ElevatorTask {
         return false;
     }
 
-    public synchronized boolean isTarget(int floor) {
+    /*----- 电梯读写 -----*/
+
+    synchronized boolean isTarget(int floor) {
         return targetFloor.contains(floor);
+    }
+
+    synchronized void setMaintain() {
+        this.maintainFlag = true;
+    }
+
+    synchronized void rmMaintain() {
+        this.maintainFlag = false;
+    }
+
+    /*----- 外部读(可能是透传) -----*/
+
+    boolean isSpace() {
+        // 目前没有运行中的任务
+        return spaceFlag;
+    }
+
+    /*----- 外部写(可能是透传) -----*/
+
+    /*----- 检修 -----*/
+
+    synchronized void allGoOut() {
+        /* 将outTask全部修改成 [from F1 to toFloor] 回流到pendingTasks */
+
+        for (int i = Config.ELEVATOR_FLOOR_MIN; i <= Config.ELEVATOR_FLOOR_MAX; i++) {
+            List<PersonRequest> list = outTask.get(i);
+            Iterator<PersonRequest> iterator = list.iterator();
+            while (iterator.hasNext()) {
+                PersonRequest request = iterator.next();
+                weight -= request.getWeight();
+                Shared.getShared().addPending(
+                        new PersonRequest(
+                                "F1",
+                                request.getToFloor(),
+                                request.getPersonId(),
+                                request.getWeight()
+                        )
+                );
+                Output.printGoOutF(request.getPersonId(), 1, elevatorId);
+                iterator.remove();
+            }
+        }
+
+        refreshTargetFloor();
+    }
+
+    synchronized void removeReceive() {
+        /* 将inTask全部回流到pendingTasks */
+
+        for (int i = Config.ELEVATOR_FLOOR_MIN; i <= Config.ELEVATOR_FLOOR_MAX; i++) {
+            List<PersonRequest> list = inTask.get(i);
+            Iterator<PersonRequest> iterator = list.iterator();
+            while (iterator.hasNext()) {
+                PersonRequest request = iterator.next();
+                Shared.getShared().addPending(request);
+                iterator.remove();
+            }
+        }
+
+        refreshTargetFloor();
+    }
+
+    void workerIn(MaintRequest request) {
+        Output.printGoIn(request.getWorkerId(), 1, elevatorId);
+    }
+
+    void workerOut(MaintRequest request) {
+        Output.printGoOutS(request.getWorkerId(), 1, elevatorId);
     }
 
 }

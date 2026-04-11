@@ -1,51 +1,49 @@
 package tools;
 
-import com.oocourse.elevator1.PersonRequest;
+import com.oocourse.elevator2.MaintRequest;
+import com.oocourse.elevator2.PersonRequest;
+import com.oocourse.elevator2.Request;
 import elevator.Elevator;
+import io.DebugOutput;
 import main.Config;
-
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import main.Shared;
 
 public class Scheduler implements Runnable {
-    /*
-     * 电梯调度、任务分配系统
-     */
+    /* 电梯调度、任务分配系统 */
 
-    private final BlockingQueue<PersonRequest> taskQueue; // 共享任务队列
-    private final List<Elevator> elevators; // 该System可调度的电梯
+    private int cnt = 1; // 1~6
 
-    public Scheduler(BlockingQueue<PersonRequest> taskQueue, List<Elevator> elevators) {
-        this.taskQueue = taskQueue;
-        this.elevators = elevators;
+    public Scheduler() {
     }
 
     @Override
     public void run() {
+        // scheduler应该结束的标志：input结束，并且电梯没有任务了
+        Shared shared = Shared.getShared();
         while (true) {
             try {
-                if (taskQueue.isEmpty()
-                        && Config.isInputFinished()) { // 任务结束
-                    Config.scheduleFinished();
-                    for (Elevator e : elevators) {
-                        synchronized (e.getTask()) {
-                            e.getTask().notifyAll();
-                        }
-                    }
-
+                Request request = shared.pollPending();
+                if (request == null) { // AllFinished,任务结束
+                    shared.scheduleEnd();
+                    DebugOutput.schedulerEnd();
                     break;
                 }
 
-                PersonRequest request = taskQueue.poll(100, TimeUnit.MILLISECONDS);
-                if (request == null) { // 每100ms检查一次队列和inputFinished
-                    continue;
-                }
-
                 //分派任务
-                int id = request.getElevatorId();
-                Elevator elevator = elevators.get(id - 1); // 位置在id-1
-                elevator.addTask(request);
+                if (request instanceof MaintRequest) {
+                    Elevator elevator = shared.getElevator(
+                            ((MaintRequest) request).getElevatorId()); // 位置在id-1
+                    elevator.setMaintain((MaintRequest) request);
+                } else { // personRequest，暂时使用均匀分配
+                    Elevator elevator;
+                    do {
+                        elevator = shared.getElevator(cnt);
+                        cnt = (cnt) % Config.ELEVATOR_NUM + 1;
+                    } while (elevator.isMaintain()); // 如果在检修，换下一台
+                    // 如果都在检修怎么办?
+                    elevator.addTask((PersonRequest) request);
+                    DebugOutput.dispatchTask(cnt);
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

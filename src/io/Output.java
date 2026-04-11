@@ -1,6 +1,6 @@
 package io;
 
-import com.oocourse.elevator1.TimableOutput;
+import com.oocourse.elevator2.TimableOutput;
 import main.Config;
 
 public class Output {
@@ -29,9 +29,26 @@ public class Output {
                 Config.changeFloorToString(pos) + "-" + elevatorId);
     }
 
-    public static void printGoOut(int personId, int pos, int elevatorId) {
+    public static void printGoOutS(int personId, int pos, int elevatorId) {
         TimableOutput.println("OUT-S-" + personId + "-" +
                 Config.changeFloorToString(pos) + "-" + elevatorId);
+    }
+
+    public static void printGoOutF(int personId, int pos, int elevatorId) {
+        TimableOutput.println("OUT-F-" + personId + "-" +
+                Config.changeFloorToString(pos) + "-" + elevatorId);
+    }
+
+    public static void printMaintain1(int elevatorId) {
+        TimableOutput.println("MAINT1-BEGIN-" + elevatorId);
+    }
+
+    public static void printMaintain2(int elevatorId) {
+        TimableOutput.println("MAINT2-BEGIN-" + elevatorId);
+    }
+
+    public static void printMaintainEnd(int elevatorId) {
+        TimableOutput.println("MAINT-END-" + elevatorId);
     }
 
 }
