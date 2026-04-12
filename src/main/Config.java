@@ -2,7 +2,7 @@ package main;
 
 public class Config {
 
-    public static final boolean DEBUG = true;
+    public static final boolean DEBUG = false;
     public static final int ELEVATOR_NUM = 6; // 电梯数量
     public static final int ELEVATOR_INITIAL_POS = 1; // 电梯初始楼层
     public static final int ELEVATOR_MAX_WEIGHT = 400; // 电梯载重 400kg
