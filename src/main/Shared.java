@@ -58,6 +58,7 @@ public class Shared {
         synchronized (lockPendingTasks) {
             while (pendingTasks.isEmpty()
                     && !shouldSchedulerEnd()) {
+                DebugOutput.waitForPoll();
                 lockPendingTasks.wait(); // 取不到任务，但是可能还有任务
             }
             return pendingTasks.poll(); // 如果依然是空的，会返回null-->AllFinished
@@ -81,7 +82,8 @@ public class Shared {
         }
     }
 
-    public void elevatorFinish() {
+    public void elevatorFinish(int id) {
+        DebugOutput.elevatorFinish(id);
         synchronized (lockPendingTasks) {
             lockPendingTasks.notifyAll();
         }

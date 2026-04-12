@@ -66,7 +66,7 @@ public class Elevator implements Runnable {
         // 如果是，开门,进出,关门
         if (task.isTarget(curFloor)) {
             openDoor();
-            task.process(curFloor, direction);
+            task.process(curFloor, direction, false);
             closeDoor();
         }
     }
@@ -125,7 +125,7 @@ public class Elevator implements Runnable {
     }
 
     private void receiveTask() throws InterruptedException {
-        task.getTask();
+        task.getTask(false);
     }
 
     private void maintain() throws InterruptedException {
@@ -213,6 +213,17 @@ public class Elevator implements Runnable {
 
     public boolean isMaintain() {
         return maintainRequest != null;
+    }
+
+    public ShadowElevator newShadow() {
+        return new ShadowElevator(task.cloneForShadow(),
+                curFloor,
+                direction,
+                door);
+    }
+
+    public int getId() {
+        return id;
     }
 
 }

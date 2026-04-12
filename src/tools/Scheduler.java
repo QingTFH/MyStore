@@ -31,18 +31,36 @@ public class Scheduler implements Runnable {
 
                 //分派任务
                 if (request instanceof MaintRequest) {
-                    Elevator elevator = shared.getElevator(
-                            ((MaintRequest) request).getElevatorId()); // 位置在id-1
-                    elevator.setMaintain((MaintRequest) request);
+                    shared.getElevator(
+                                    ((MaintRequest) request).getElevatorId())
+                            .setMaintain((MaintRequest) request); // 位置在id-1
                 } else { // personRequest，暂时使用均匀分配
-                    Elevator elevator;
-                    do {
+
+                    Elevator elevator = null;
+                    int costTime = Integer.MAX_VALUE;
+                    for (int id = 1; id <= Config.ELEVATOR_NUM; id++) {
+                        Elevator e = shared.getElevator(id);
+                        if (e.isMaintain()) { // 不考虑检修中的电梯
+                            continue;
+                        }
+                        int time = e.newShadow()
+                                .addTask((PersonRequest) request)
+                                .simulate(); // 模拟完成时间
+                        if (time < costTime) {
+                            costTime = time;
+                            elevator = e;
+                            DebugOutput.simulateWin(id, time);
+                        }
+                    }
+
+                    if (elevator == null) {
                         elevator = shared.getElevator(cnt);
-                        cnt = (cnt) % Config.ELEVATOR_NUM + 1;
-                    } while (elevator.isMaintain()); // 如果在检修，换下一台
-                    // 如果都在检修怎么办?
+                        cnt = (cnt % Config.ELEVATOR_NUM) + 1;
+                    }
+
                     elevator.addTask((PersonRequest) request);
-                    DebugOutput.dispatchTask(cnt);
+                    DebugOutput.dispatchTask(elevator.getId());
+
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);

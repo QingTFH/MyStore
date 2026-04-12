@@ -34,4 +34,21 @@ public class DebugOutput {
         }
     }
 
+    public static void simulateWin(int id, int time) {
+        if (Config.DEBUG) {
+            System.out.println(id + " elevatorSimulate winOFtime " + time);
+        }
+    }
+
+    public static void elevatorFinish(int id) {
+        if (Config.DEBUG) {
+            System.out.println(id + " elevator is space ");
+        }
+    }
+
+    public static void waitForPoll() {
+        if (Config.DEBUG) {
+            System.out.println("wait for poll");
+        }
+    }
 }

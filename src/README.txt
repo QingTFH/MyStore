@@ -20,3 +20,11 @@ v1:重构并增加了shared
 			在elevatorTask释放receive的任务时，需要先持有自己elevatorTask的锁，再把任务放回pending--->需要持有pending的锁
 		两种持有方式相反，可能造成死锁
 	思路：将 "电梯没有运行结束"这一只读条件去除锁化，使用volatile spaceFlag表示elevatorTask是否空闲(运行结束)，每次造成targetFloor变动时读取
+缓存：Elevator elevator; // 均匀分配方法
+                        do {
+                            elevator = shared.getElevator(cnt);
+                            cnt = (cnt) % Config.ELEVATOR_NUM + 1;
+                        } while (elevator.isMaintain()); // 如果在检修，换下一台
+                        // 如果都在检修怎么办?
+                        elevator.addTask((PersonRequest) request);
+                        DebugOutput.dispatchTask(cnt);

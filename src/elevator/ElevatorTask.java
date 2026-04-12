@@ -51,16 +51,16 @@ public class ElevatorTask {
 
     /* ----- 处理请求逻辑 ----- */
 
-    synchronized void process(int floor, Direction direction) {
+    synchronized void process(int floor, Direction direction, boolean simulate) {
         /* 处理当前楼层的所有进出请求,更新重量,刷新target */
         //处理离开请求
-        goOut(floor);
+        goOut(floor, simulate);
         //处理进入请求: 只接受当前运动方向上的进入请求
-        goIn(floor, direction);
+        goIn(floor, direction, simulate);
         //刷新target
     }
 
-    private void goIn(int floor, Direction direction) {
+    private void goIn(int floor, Direction direction, boolean simulate) {
         /* 处理当前楼层的进入请求,更新重量 */
         // 检修中, 跳过
         if (maintainFlag) {
@@ -87,18 +87,20 @@ public class ElevatorTask {
                 continue;
             }
             //合法：进入电梯
-            singleGoIn(request, floor);
+            singleGoIn(request, floor, simulate);
         }
     }
 
-    private void singleGoIn(PersonRequest request, int floor) {
+    private void singleGoIn(PersonRequest request, int floor, boolean simulate) {
         /* 接受inTask, 转移到outTask, 更新重量, 输出 */
         changeTask(request);
         weight += request.getWeight();
-        Output.printGoIn(request.getPersonId(), floor, elevatorId);
+        if (!simulate) {
+            Output.printGoIn(request.getPersonId(), floor, elevatorId);
+        }
     }
 
-    private void goOut(int floor) {
+    private void goOut(int floor, boolean simulate) {
         /* 处理当前楼层的离开请求,更新重量 */
         // 判断当前楼层有无out请求
         List<PersonRequest> list = outTask.get(floor);
@@ -111,15 +113,17 @@ public class ElevatorTask {
         // 有：离开电梯、输出
         List<PersonRequest> copy = new ArrayList<>(list);
         for (PersonRequest request : copy) {
-            singleGoOut(request, floor);
+            singleGoOut(request, floor, simulate);
         }
     }
 
-    private void singleGoOut(PersonRequest request, int floor) {
+    private void singleGoOut(PersonRequest request, int floor, boolean simulate) {
         /* 完成outTask, 更新重量, 输出 */
         weight -= request.getWeight();
         finishRequest(request);
-        Output.printGoOutS(request.getPersonId(), floor, elevatorId);
+        if (!simulate) {
+            Output.printGoOutS(request.getPersonId(), floor, elevatorId);
+        }
     }
 
     /* ----- 任务分派逻辑 ----- */
@@ -130,14 +134,15 @@ public class ElevatorTask {
         notifyAll();
     }
 
-    synchronized void receiveTask() {
+    synchronized void receiveTask(boolean simulate) {
         /* receive所有任务, 加入inTask队列, 输出 */
         while (!task.isEmpty()) {
             PersonRequest request = task.poll();
             int floor = Config.changeStringToFloor(request.getFromFloor());
             inTask.get(floor).add(request);
-            Output.printReceive(request.getPersonId(), elevatorId);
-
+            if (!simulate) {
+                Output.printReceive(request.getPersonId(), elevatorId);
+            }
             refreshSingleTargetFloor(floor);
         }
     }
@@ -184,7 +189,7 @@ public class ElevatorTask {
         spaceFlag = targetFloor.isEmpty();
     }
 
-    synchronized void getTask() throws InterruptedException {
+    synchronized void getTask(boolean simulate) throws InterruptedException {
         // 当前没有任务，没有可接收任务，不在检修中，等待；
         // 有，receive
 
@@ -192,11 +197,11 @@ public class ElevatorTask {
                 && targetFloor.isEmpty()
                 && !Shared.getShared().isScheduleEnd()
                 && !maintainFlag) {
-            Shared.getShared().elevatorFinish();
+            Shared.getShared().elevatorFinish(elevatorId);
             wait();
         }
 
-        receiveTask();
+        receiveTask(simulate);
     }
 
     /* ----- 运动调控逻辑 ----- */
@@ -278,6 +283,7 @@ public class ElevatorTask {
 
     synchronized void rmMaintain() {
         this.maintainFlag = false;
+        spaceFlag = targetFloor.isEmpty();
     }
 
     /*----- 外部读(可能是透传) -----*/
@@ -338,6 +344,23 @@ public class ElevatorTask {
 
     void workerOut(MaintRequest request) {
         Output.printGoOutS(request.getWorkerId(), 1, elevatorId);
+    }
+
+    ElevatorTask cloneForShadow() {
+        ElevatorTask shadow = new ElevatorTask(elevatorId);
+        synchronized (this) {
+            shadow.weight = this.weight;
+            shadow.maintainFlag = this.maintainFlag;
+            // 深拷贝inTask/outTask
+            for (int i = Config.ELEVATOR_FLOOR_MIN; i <= Config.ELEVATOR_FLOOR_MAX; i++) {
+                shadow.inTask.get(i).addAll(this.inTask.get(i));
+                shadow.outTask.get(i).addAll(this.outTask.get(i));
+            }
+            // 深拷贝task缓存
+            shadow.task.addAll(this.task);
+            shadow.targetFloor.addAll(this.targetFloor);
+        }
+        return shadow;
     }
 
 }
