@@ -323,8 +323,9 @@ public class ElevatorTask {
     }
 
     synchronized void removeReceive() {
-        /* 将inTask全部回流到pendingTasks */
+        /* 将inTask 和 缓存task 全部回流到pendingTasks */
 
+        // 清空inTask
         for (int i = Config.ELEVATOR_FLOOR_MIN; i <= Config.ELEVATOR_FLOOR_MAX; i++) {
             List<PersonRequest> list = inTask.get(i);
             Iterator<PersonRequest> iterator = list.iterator();
@@ -333,6 +334,11 @@ public class ElevatorTask {
                 Shared.getShared().addPending(request);
                 iterator.remove();
             }
+        }
+
+        // 清空task
+        while (!task.isEmpty()) {
+            Shared.getShared().addPending(task.poll());
         }
 
         refreshTargetFloor();
