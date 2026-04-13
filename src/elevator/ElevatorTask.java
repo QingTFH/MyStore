@@ -306,7 +306,7 @@ public class ElevatorTask {
             while (iterator.hasNext()) {
                 PersonRequest request = iterator.next();
                 weight -= request.getWeight();
-                Shared.getShared().addPending(
+                task.add(
                         new PersonRequest(
                                 "F1",
                                 request.getToFloor(),
