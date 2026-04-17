@@ -216,10 +216,12 @@ public class Elevator implements Runnable {
     }
 
     public ShadowElevator newShadow() {
+        DebugOutput.newShadow(getId());
         return new ShadowElevator(task.cloneForShadow(),
                 curFloor,
                 direction,
-                door);
+                door,
+                isMaintain());
     }
 
     public int getId() {

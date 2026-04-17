@@ -13,6 +13,7 @@ public class ShadowElevator {
     private Integer curFloor;
     private Config.Direction direction;
     private boolean door;
+    private final boolean isMaintain;
     private int moveCostTime = Config.ELEVATOR_MOVE_TIME;
 
     private final ElevatorTask task;
@@ -20,17 +21,33 @@ public class ShadowElevator {
     public ShadowElevator(ElevatorTask elevatorTask,
                           int floor,
                           Config.Direction dir,
-                          boolean doorState) {
+                          boolean doorState,
+                          boolean isMaintain) {
         task = elevatorTask;
-        curFloor = floor;
-        direction = dir;
-        door = doorState;
+        this.isMaintain = isMaintain;
+        if (isMaintain) { // 直接跳过maintain状态，模拟maintain结束后的行为
+            task.rmMaintain();
+            curFloor = 1;
+            direction = dir;
+            door = DOOR_CLOSED;
+        } else {
+            curFloor = floor;
+            direction = dir;
+            door = doorState;
+        }
     }
 
     public int simulate() {
         task.receiveTask(true);
 
         int time = 0; // 完成“所有任务”所需的时间
+        if (isMaintain) {
+            /* 最远楼层F7 -> F1 + (open + close) + wait + toFloor(0.2)(maxSub = 2)
+             + toF1(0.2) + (open + close)
+             6 * 0.4 + 0.4 + 1 + 0.2 * 4 = 4.6s    */
+            time += 4600;
+
+        }
 
         while (!task.isSpace()) { // 任务还没有做完
             // 沿用电梯的策略：处理请求->移动楼层

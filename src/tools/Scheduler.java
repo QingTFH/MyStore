@@ -40,12 +40,10 @@ public class Scheduler implements Runnable {
                     int costTime = Integer.MAX_VALUE;
                     for (int id = 1; id <= Config.ELEVATOR_NUM; id++) {
                         Elevator e = shared.getElevator(id);
-                        if (e.isMaintain()) { // 不考虑检修中的电梯
-                            continue;
-                        }
                         int time = e.newShadow()
                                 .addTask((PersonRequest) request)
                                 .simulate(); // 模拟完成时间
+                        DebugOutput.simulate(id, time);
                         if (time < costTime) {
                             costTime = time;
                             elevator = e;
