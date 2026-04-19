@@ -99,7 +99,6 @@ public class Shared {
     }
 
     public boolean isAllRequestFinish() {
-        System.out.println((remainingRequest.get() == 0 ? "shouldFinish" : "no"));
         return remainingRequest.get() == 0;
     }
 
