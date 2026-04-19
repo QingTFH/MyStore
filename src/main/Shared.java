@@ -1,39 +1,39 @@
 package main;
 
-import com.oocourse.elevator2.Request;
-import elevator.Elevator;
+import com.oocourse.elevator3.Request;
+import elevator.Shaft;
 import io.DebugOutput;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Shared {
     /* 线程间的共享资源 */
-    /* 其他线程需要读取： */
-    /* 其他线程需要写入： */
+
+    private final AtomicInteger remainingRequest = new AtomicInteger(0);
 
     private volatile boolean inputFinished = false;
-    private volatile boolean scheduleFinished = false;
 
     private final LinkedList<Request> pendingTasks = new LinkedList<>(); // 未被receive的任务
     private final Object lockPendingTasks = new Object();
 
-    private final List<Elevator> elevators = new ArrayList<>(Config.ELEVATOR_NUM);
+    private final List<Shaft> shafts = new ArrayList<>(Config.SHAFT_NUM);
 
     /*----- 单例模式 -----*/
 
     private static Shared shared = null;
 
     private Shared() {
-        for (int i = 1; i <= Config.ELEVATOR_NUM; i++) {
-            elevators.add(new Elevator(i));
+        for (int id = 1; id <= Config.SHAFT_NUM; id++) {
+            shafts.add(new Shaft(id));
         }
     }
 
-    public void startElevators() {
-        for (Elevator e : elevators) {
-            new Thread(e).start();
+    public void startShaft() {
+        for (Shaft shaft : shafts) {
+            new Thread(shaft).start();
         }
     }
 
@@ -65,54 +65,42 @@ public class Shared {
         }
     }
 
-    public Elevator getElevator(int id) { // 获得id号电梯
-        return elevators.get(id - 1);
-    }
-
-    public List<Elevator> getElevatorList() {
-        return elevators;
+    public Shaft getShaft(int id) {
+        return shafts.get(id - 1);
     }
 
     /*----- 结束判断 -----*/
 
-    public void inputEnd() {
+    public void inputEnd() { // 第一级盘子的生产者不唯一，不适合用毒丸，需要用flag + notify
         inputFinished = true;
         synchronized (lockPendingTasks) {
             lockPendingTasks.notifyAll();
         }
     }
 
-    public void elevatorFinish(int id) {
-        DebugOutput.elevatorFinish(id);
+    public boolean shouldSchedulerEnd() { // input结束 并且 所有任务都完成
+        return inputFinished && isAllRequestFinish();
+    }
+
+    public void scheduleEnd() {
+        for (Shaft shaft : shafts) {
+            shaft.addTask(Config.POISON);
+        }
+    }
+
+    public void addRequest() {
+        remainingRequest.addAndGet(1);
+    }
+
+    public void finishRequest() {
+        remainingRequest.addAndGet(-1);
         synchronized (lockPendingTasks) {
             lockPendingTasks.notifyAll();
         }
     }
 
-    public boolean shouldSchedulerEnd() {
-        // input结束 并且 所有电梯都没有可能吐出任务了
-        if (!inputFinished) {
-            return false;
-        }
-        for (Elevator e : elevators) {
-            if (!e.isSpace() || e.isMaintain()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public void scheduleEnd() {
-        scheduleFinished = true;
-        for (Elevator e : shared.getElevatorList()) {
-            synchronized (e.getTask()) {
-                e.getTask().notifyAll();
-            }
-        }
-    }
-
-    public boolean isScheduleEnd() {
-        return scheduleFinished;
+    public boolean isAllRequestFinish() {
+        return remainingRequest.get() == 0;
     }
 
 }

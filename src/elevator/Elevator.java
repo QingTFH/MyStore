@@ -1,7 +1,7 @@
 package elevator;
 
-import com.oocourse.elevator2.MaintRequest;
-import com.oocourse.elevator2.PersonRequest;
+import com.oocourse.elevator3.MaintRequest;
+import com.oocourse.elevator3.PersonRequest;
 import io.DebugOutput;
 import io.Output;
 import main.Config;
@@ -27,6 +27,7 @@ public class Elevator implements Runnable {
     private final ElevatorTask task;
 
     private volatile MaintRequest maintainRequest = null;
+    private volatile boolean doubleFlag = false;
 
     public Elevator(int id) {
         this.id = id;
@@ -37,16 +38,17 @@ public class Elevator implements Runnable {
 
     public void run() { // 尽量保持run内部简洁
         // 电梯应该结束的标志：scheduler结束
+        DebugOutput.elevatorStart(id);
         while (true) {
             try {
                 if (isMaintain()) { // 检修
                     maintain();
                 }
 
-                receiveTask(); // 如果目前没有任务了,等待任务
+                receiveTask(); // 如果目前没有任务了, 会等待任务
                 if (isSpace()
-                        && Shared.getShared().isScheduleEnd()) {
-                    DebugOutput.elevatorEnd(id);
+                        && isEnd()) {
+                    end();
                     break;
                 }
 
@@ -61,28 +63,70 @@ public class Elevator implements Runnable {
         }
     }
 
-    private void process() throws InterruptedException {
-        // 检测当前楼层是否是目标楼层
-        // 如果是，开门,进出,关门
-        if (task.isTarget(curFloor)) {
-            openDoor();
-            task.process(curFloor, direction, false);
-            closeDoor();
-        }
+    private void end() {
+        DebugOutput.elevatorEnd(id);
     }
+
+    /* ----- 运动逻辑 ----- */
 
     private void move() throws InterruptedException {
         // “移动一层”
+        // 如果进入公共区域, 需要获得
+        // 如果离开公共区域, 需要释放
+
         if (direction == Direction.NULL) {
-            return; // 快速失败
+            if(!doubleFlag || !(curFloor == 2)) {
+                return; // 快速失败
+            }
+
+            // 双轿厢模式下, process后如果在F2, 需要立刻移动退出F2
+            // 设定方向以退出F2
+            direction = (id <= Config.SHAFT_NUM) ?
+                    Direction.UP : Direction.DOWN; // 主轿厢向上
         }
 
         closeDoor();
-        Thread.sleep(moveCostTime); // 移动一层要0.4s,对应sleep(400)
-        curFloor += direction == Direction.UP ? 1 : -1;
+        int prevFloor = curFloor;
+        int nextFloor = curFloor + (direction == Direction.UP ? 1 : -1);
+        Thread.sleep(moveCostTime);
+
+        if(doubleFlag && nextFloor == 2) { // 需要进入F2, 释放锁在输出前
+            lockSharedFloor();
+        }
+
+        curFloor = nextFloor;
         Output.printArrive(curFloor, id); // 先消耗时间，再到位
+
+        if(doubleFlag && prevFloor == 2) { // 需要离开F2, 释放锁在输出后
+            unlockSharedFloor();
+        }
+
         if (curFloor == Config.ELEVATOR_FLOOR_MIN || curFloor == Config.ELEVATOR_FLOOR_MAX) {
             direction = Direction.NULL;
+        }
+    }
+
+    private void unlockSharedFloor() {
+        // 解锁F2
+        Shaft shaft = Shared.getShared().getShaft(id <= 6
+                ? id : id-Config.SHAFT_NUM);
+        Object lock = shaft.getFloorLock();
+        synchronized (lock) {
+            shaft.resetF2Busy();
+            lock.notifyAll();
+        }
+    }
+
+    private void lockSharedFloor() throws InterruptedException {
+        // 锁F2
+        Shaft shaft = Shared.getShared().getShaft(id <= 6
+                ? id : id-Config.SHAFT_NUM);
+        Object lock = shaft.getFloorLock();
+        synchronized (lock) {
+            while(shaft.isF2Busy()) {
+                lock.wait();
+            }
+            shaft.setF2Busy();
         }
     }
 
@@ -124,8 +168,39 @@ public class Elevator implements Runnable {
         direction = task.decideNextDirection(curFloor, direction);
     }
 
+    /*---------- 任务逻辑 ----------*/
+
+    private void process() throws InterruptedException {
+        // 检测当前楼层是否是目标楼层
+        // 如果是，开门,进出,关门
+        if (task.isTarget(curFloor)) {
+            openDoor();
+            task.process(curFloor, direction, false);
+            closeDoor();
+        }
+    }
+
+    public void addTask(PersonRequest request) {
+        task.addTask(request);
+    }
+
     private void receiveTask() throws InterruptedException {
-        task.getTask(false);
+        task.receiveTask(false);
+    }
+
+    public boolean isSpace() { // 这个电梯目前没任务了
+        return task.isSpace();
+    }
+
+    /*---------- maintain ----------*/
+
+    public void setMaintain(MaintRequest request) {
+        /* 启动检修流程, 唤醒电梯 */
+        maintainRequest = request;
+        synchronized (task) {
+            task.setMaintain();
+            task.notifyAll();
+        }
     }
 
     private void maintain() throws InterruptedException {
@@ -134,7 +209,7 @@ public class Elevator implements Runnable {
         // 移动到1楼，开门赶人，上工人，关门，输出
         moveTo(1);
         process(); // 先处理本楼层可能的out请求, 避免new出 1->1的请求
-        openDoor();
+        // 此处可能会导致额外的开门
         allGoOut();
         workerIn();
         closeDoor();
@@ -170,8 +245,9 @@ public class Elevator implements Runnable {
         this.moveCostTime = moveCostTime;
     }
 
-    private void allGoOut() {
-        task.allGoOut();
+    private void allGoOut(){
+        openDoor();
+        task.allGoOut(curFloor);
     }
 
     private void removeReceive() {
@@ -179,36 +255,12 @@ public class Elevator implements Runnable {
     }
 
     private void workerIn() {
+        openDoor();
         task.workerIn(maintainRequest);
     }
 
     private void workerOut() {
         task.workerOut(maintainRequest);
-    }
-
-    /*----- 外部写 -----*/
-
-    public void addTask(PersonRequest request) {
-        task.addTask(request);
-    }
-
-    public void setMaintain(MaintRequest request) {
-        /* 启动检修流程, 唤醒电梯 */
-        maintainRequest = request;
-        synchronized (task) {
-            task.setMaintain();
-            task.notifyAll();
-        }
-    }
-
-    /*----- 外部读 -----*/
-
-    public ElevatorTask getTask() {
-        return this.task;
-    }
-
-    public boolean isSpace() { // 这个电梯目前没任务了
-        return task.isSpace();
     }
 
     public boolean isMaintain() {
@@ -226,6 +278,59 @@ public class Elevator implements Runnable {
 
     public int getId() {
         return id;
+    }
+
+    private boolean isEnd() {
+        return task.isEnd();
+    }
+
+    /*---------- double ----------*/
+
+    void setAsMain() throws InterruptedException { // 进入双轿厢状态
+        // 移动到F3, 所有人下电梯, 输出UPDATE-BEGIN:t1
+        moveTo(3);
+        process(); // 先处理本楼层可能的out请求, 避免new出 1->1的请求
+        allGoOut(); // 此处可能会导致额外的开门
+        closeDoor();
+        Output.updateBegin(id);
+        long timeBegin = System.currentTimeMillis();
+
+        // UPDATE: 取消所有receive, 进行改造, 等待至少1s(-t1)
+        removeReceive();
+        task.changeLimitedFloor();
+        long timeEnd = System.currentTimeMillis();
+        Thread.sleep(1010-(timeEnd-timeBegin));
+
+        // UPDATE-END: 备用轿厢在F1, 主轿厢在F3, 进入双轿厢模式
+        doubleFlag = true;
+        Output.updateEnd(id);
+    }
+
+    void setAsDeputy() {
+        doubleFlag = true;
+        task.changeLimitedFloor();
+    }
+
+    void mainOver() {
+        task.resetLimitedFloor();
+        doubleFlag = false;
+    }
+
+    void deputyOver() throws InterruptedException {
+        moveTo(1);
+        process(); // 先处理本楼层可能的out请求, 避免new出 1->1的请求
+        allGoOut(); // 此处可能会导致额外的开门
+        closeDoor();
+        Output.recycleBegin(id);
+        long timeBegin = System.currentTimeMillis();
+
+        // UPDATE: 取消所有receive, 进行改造, 等待至少1s(-t1)
+        removeReceive();
+        long timeEnd = System.currentTimeMillis();
+        Thread.sleep(1010-(timeEnd-timeBegin));
+
+        doubleFlag = false;
+        Output.recycleEnd(id);
     }
 
 }

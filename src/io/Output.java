@@ -1,6 +1,6 @@
 package io;
 
-import com.oocourse.elevator2.TimableOutput;
+import com.oocourse.elevator3.TimableOutput;
 import main.Config;
 
 public class Output {
@@ -49,6 +49,22 @@ public class Output {
 
     public static void printMaintainEnd(int elevatorId) {
         TimableOutput.println("MAINT-END-" + elevatorId);
+    }
+
+    public static void updateBegin(int mainId) {
+        TimableOutput.println("UPDATE-BEGIN-" + mainId);
+    }
+
+    public static void updateEnd(int mainId) {
+        TimableOutput.println("UPDATE-END-" + mainId);
+    }
+
+    public static void recycleBegin(int deputyId) {
+        TimableOutput.println("RECYCLE-BEGIN-" + deputyId);
+    }
+
+    public static void recycleEnd(int deputyId) {
+        TimableOutput.println("RECYCLE-END-" + deputyId);
     }
 
 }

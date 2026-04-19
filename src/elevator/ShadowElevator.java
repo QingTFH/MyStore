@@ -1,6 +1,6 @@
 package elevator;
 
-import com.oocourse.elevator2.PersonRequest;
+import com.oocourse.elevator3.PersonRequest;
 import main.Config;
 
 public class ShadowElevator {
@@ -37,7 +37,7 @@ public class ShadowElevator {
         }
     }
 
-    public int simulate() {
+    public int simulate() throws InterruptedException {
         task.receiveTask(true);
 
         int time = 0; // 完成“所有任务”所需的时间

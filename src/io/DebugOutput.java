@@ -1,8 +1,21 @@
 package io;
 
+import com.oocourse.elevator3.Request;
 import main.Config;
 
 public class DebugOutput {
+
+    public static void exception(String a) {
+        if (Config.DEBUG) {
+            System.out.println("-----------Exception :: " + a + " !------------");
+        }
+    }
+
+    public static void cantDo() {
+        if (Config.DEBUG) {
+            System.out.println("zan wei wan gong!!!!!!!!!!");
+        }
+    }
 
     public static void inputEnd() {
         if (Config.DEBUG) {
@@ -46,7 +59,7 @@ public class DebugOutput {
         }
     }
 
-    public static void elevatorFinish(int id) {
+    public static void elevatorSpace(int id) {
         if (Config.DEBUG) {
             System.out.println(id + " elevator is space ");
         }
@@ -63,4 +76,35 @@ public class DebugOutput {
             System.out.println(id + " id elevator new shadow");
         }
     }
+
+    public static void getOtherRequest(Request request) {
+        if (Config.DEBUG) {
+            System.out.println("Other Request Class: " + request.getClass().toString());
+        }
+    }
+
+    public static void shaftEnd(int id) {
+        if (Config.DEBUG) {
+            System.out.println(id + " Shaft End");
+        }
+    }
+
+    public static void receiveUpdate(int id) {
+        if (Config.DEBUG) {
+            System.out.println(id + " shaft Receive Update");
+        }
+    }
+
+    public static void receiveRecycle(int id) {
+        if (Config.DEBUG) {
+            System.out.println(id + " shaft Receive Recycle");
+        }
+    }
+
+    public static void elevatorStart(int id) {
+        if (Config.DEBUG) {
+            System.out.println(id + " elevator Start");
+        }
+    }
+
 }

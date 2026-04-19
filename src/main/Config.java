@@ -1,18 +1,24 @@
 package main;
 
+import com.oocourse.elevator3.PersonRequest;
+
 public class Config {
 
+    public static final PersonRequest POISON
+            = new PersonRequest("NONE","NONE",-1,-1);
+
     public static final boolean DEBUG = false;
-    public static final int ELEVATOR_NUM = 6; // 电梯数量
+    public static final int SHAFT_NUM = 6; // 电梯井数量
     public static final int ELEVATOR_INITIAL_POS = 1; // 电梯初始楼层
+    public static final int ELEVATOR_FLOOR_MAX = 7; // 最高楼层
+    public static final int ELEVATOR_FLOOR_MIN = -3; // 最低楼层
+    public static final int ELEVATOR_MIDDLE_POS = 2; // 双轿厢中间楼层
     public static final int ELEVATOR_MAX_WEIGHT = 400; // 电梯载重 400kg
     public static final int ELEVATOR_MOVE_TIME = 400; // 电梯移动：400ms
     public static final int ELEVATOR_CLOSED_MIN_TIME = 400; // 关门最小延迟：400ms
-    public static final int ELEVATOR_FLOOR_MAX = 7; // 最高楼层
-    public static final int ELEVATOR_FLOOR_MIN = -3; // 最低楼层
     public static final int ELEVATOR_REP_MOVE_TIME = 200; // 检修时，移动花费时间
     public static final int ELEVATOR_REP_STOP_TIME = 1000; // 检修时，等待花费时间
-    public static final int ELEVATOR_REP_COMPLETE = 7000; // 检修BEGIN - END最多花费时间
+    public static final int ELEVATOR_REP_MAXTIME = 7000; // 检修BEGIN - END最多花费时间
 
     public enum Direction {
         UP, DOWN, NULL

@@ -1,7 +1,8 @@
 package elevator;
 
-import com.oocourse.elevator2.MaintRequest;
-import com.oocourse.elevator2.PersonRequest;
+import com.oocourse.elevator3.MaintRequest;
+import com.oocourse.elevator3.PersonRequest;
+import io.DebugOutput;
 import io.Output;
 import main.Config;
 import main.Config.Direction;
@@ -19,8 +20,9 @@ public class ElevatorTask {
     /*一个电梯内部的任务管理器, 处理该电梯所有任务逻辑需要处理"每一层的请求"、处理请求后调度运行方向*/
     /* 除电梯线程外, 其他线程需要读写：task(写)、targetFloor(读) */
 
-    private final BlockingQueue<PersonRequest> task =
-            new LinkedBlockingQueue<>(); // 缓存队列，分配了但还没receive的任务
+    private final BlockingQueue<PersonRequest> buffer =
+            new LinkedBlockingQueue<>();
+    // 第三级盘子, 分配了但还没receive的任务. 生产者: shaft; 消费者: elevator(elevatorTask)
     private final HashMap<Integer, List<PersonRequest>> inTask =
             new HashMap<>(); // 申请进入电梯的任务
     private final HashMap<Integer, List<PersonRequest>> outTask =
@@ -30,9 +32,13 @@ public class ElevatorTask {
     private final int elevatorId;
     private int weight = 0;
 
+    private volatile boolean endFlag = false;
     private volatile boolean maintainFlag = false;
-
     private volatile boolean spaceFlag = true;
+    private volatile boolean doubleFlag = false;
+
+    private int maxFloor = Config.ELEVATOR_FLOOR_MAX;
+    private int minFloor = Config.ELEVATOR_FLOOR_MIN;
 
     // 目标楼层,包含：inTask的“From楼层” 和 outTask的"To楼层"
 
@@ -49,7 +55,7 @@ public class ElevatorTask {
         }
     }
 
-    /* ----- 处理请求逻辑 ----- */
+    /*---------- 处理请求逻辑 ----------*/
 
     synchronized void process(int floor, Direction direction, boolean simulate) {
         /* 处理当前楼层的所有进出请求,更新重量,刷新target */
@@ -101,7 +107,8 @@ public class ElevatorTask {
     }
 
     private void goOut(int floor, boolean simulate) {
-        /* 处理当前楼层的离开请求,更新重量 */
+        /* 处理当前楼层的离开请求 */
+
         // 判断当前楼层有无out请求
         List<PersonRequest> list = outTask.get(floor);
 
@@ -113,44 +120,100 @@ public class ElevatorTask {
         // 有：离开电梯、输出
         List<PersonRequest> copy = new ArrayList<>(list);
         for (PersonRequest request : copy) {
-            singleGoOut(request, floor, simulate);
+            singleOut(request, floor, simulate);
         }
     }
 
-    private void singleGoOut(PersonRequest request, int floor, boolean simulate) {
-        /* 完成outTask, 更新重量, 输出 */
-        weight -= request.getWeight();
-        finishRequest(request);
-        if (!simulate) {
-            Output.printGoOutS(request.getPersonId(), floor, elevatorId);
+    private void singleOut(PersonRequest request, int curFloor, boolean simulate) {
+        /* 完成/暂停outTask, 更新重量, 输出 */
+
+        // 从outTask钟移除
+        deleteRequestFromOutTask(request);
+
+        // out-S
+        if(curFloor == Config.changeStringToFloor(request.getToFloor())) {
+            singleOutSuccess(curFloor, request, simulate);
+            return;
         }
+
+        // out-F
+        singleOutFailure(curFloor, request, simulate);
+    }
+
+    private synchronized void singleOutSuccess(int curFloor, PersonRequest request, boolean simulate) {
+        weight -= request.getWeight();
+        if (!simulate) {
+            Output.printGoOutS(request.getPersonId(), curFloor, elevatorId);
+            Shared.getShared().finishRequest();
+        }
+    }
+
+    private synchronized void singleOutFailure(int curFloor, PersonRequest request, boolean simulate) {
+        /* 一个请求out-F */
+        weight -= request.getWeight();
+
+        if (!simulate) {
+            Output.printGoOutF(request.getPersonId(), curFloor, elevatorId);
+        }
+
+        Shared.getShared().addPending(
+            new PersonRequest(
+                    Config.changeFloorToString(curFloor),
+                    request.getToFloor(),
+                    request.getPersonId(),
+                    request.getWeight()
+            )
+        );
     }
 
     /* ----- 任务分派逻辑 ----- */
 
     synchronized void addTask(PersonRequest request) {
         /* 向任务列表中添加一个任务 request */
-        task.add(request);
+        buffer.add(request);
         notifyAll();
     }
 
-    synchronized void receiveTask(boolean simulate) {
-        /* receive所有任务, 加入inTask队列, 输出 */
-        while (!task.isEmpty()) {
-            PersonRequest request = task.poll();
-            int floor = Config.changeStringToFloor(request.getFromFloor());
-            inTask.get(floor).add(request);
-            if (!simulate) {
-                Output.printReceive(request.getPersonId(), elevatorId);
-            }
-            refreshSingleTargetFloor(floor);
+    synchronized void receiveTask(boolean simulate) throws InterruptedException {
+        /* 尝试receive所有任务, 加入inTask队列, 输出 */
+
+        while (buffer.isEmpty()
+                && targetFloor.isEmpty()
+                && !maintainFlag) { // 进入空闲状态
+            wait();
         }
+
+        while (!buffer.isEmpty()) { // 清空buffer
+            PersonRequest request = buffer.poll();
+            if(request == Config.POISON) { // 遇到结束标志
+                endFlag = true;
+                continue;
+            }
+            receiveSingleRequest(request, simulate);
+        }
+    }
+
+    synchronized void receiveSingleRequest(PersonRequest request, boolean simulate) {
+        //receive时, 上车点一定是可到达的楼层
+        int floor = Config.changeStringToFloor(request.getFromFloor());
+        inTask.get(floor).add(request);
+
+        if (!simulate) {
+            Output.printReceive(request.getPersonId(), elevatorId);
+        }
+
+        refreshSingleTargetFloor(floor);
     }
 
     private void changeTask(PersonRequest request) {
         /* 将 request 从 inTask 转移到 outTask */
+
+        // 下车点不一定是可到达的楼层
         int to = Config.changeStringToFloor(request.getToFloor());
         int from = Config.changeStringToFloor(request.getFromFloor());
+
+        to = Math.max(minFloor, Math.min(maxFloor, to)); // 将to限定在区间内
+
         List<PersonRequest> inList = inTask.get(from);
         inList.remove(request);
         List<PersonRequest> outList = outTask.get(to);
@@ -160,11 +223,14 @@ public class ElevatorTask {
         refreshSingleTargetFloor(from);
     }
 
-    private void finishRequest(PersonRequest request) {
+    private void deleteRequestFromOutTask(PersonRequest request) {
         /* 将请求从outTask中删除 */
         int to = Config.changeStringToFloor(request.getToFloor());
+        to = Math.max(minFloor, Math.min(maxFloor, to)); // 将to限定在区间内
+
         List<PersonRequest> outList = outTask.get(to);
         outList.remove(request);
+
         refreshSingleTargetFloor(to);
     }
 
@@ -187,21 +253,6 @@ public class ElevatorTask {
         }
 
         spaceFlag = targetFloor.isEmpty();
-    }
-
-    synchronized void getTask(boolean simulate) throws InterruptedException {
-        // 当前没有任务，没有可接收任务，不在检修中，等待；
-        // 有，receive
-
-        while (task.isEmpty()
-                && targetFloor.isEmpty()
-                && !Shared.getShared().isScheduleEnd()
-                && !maintainFlag) {
-            Shared.getShared().elevatorFinish(elevatorId);
-            wait();
-        }
-
-        receiveTask(simulate);
     }
 
     /* ----- 运动调控逻辑 ----- */
@@ -286,35 +337,25 @@ public class ElevatorTask {
         spaceFlag = targetFloor.isEmpty();
     }
 
-    /*----- 外部读(可能是透传) -----*/
-
     boolean isSpace() {
         // 目前没有运行中的任务
         return spaceFlag;
     }
 
-    /*----- 外部写(可能是透传) -----*/
+    /*---------- 处理请求逻辑 ----------*/
 
-    /*----- 检修 -----*/
+    synchronized void allGoOut(int curFloor) {
+        /* 将outTask全部修改成 [from curFloor to toFloor] 回流到pendingTasks */
 
-    synchronized void allGoOut() {
-        /* 将outTask全部修改成 [from F1 to toFloor] 回流到pendingTasks */
+        goOut(curFloor, false); // 先处理本楼层可能的out-S
 
+        // 所有请求 out-F
         for (int i = Config.ELEVATOR_FLOOR_MIN; i <= Config.ELEVATOR_FLOOR_MAX; i++) {
             List<PersonRequest> list = outTask.get(i);
             Iterator<PersonRequest> iterator = list.iterator();
+
             while (iterator.hasNext()) {
-                PersonRequest request = iterator.next();
-                weight -= request.getWeight();
-                task.add(
-                        new PersonRequest(
-                                "F1",
-                                request.getToFloor(),
-                                request.getPersonId(),
-                                request.getWeight()
-                        )
-                );
-                Output.printGoOutF(request.getPersonId(), 1, elevatorId);
+                singleOutFailure(curFloor, iterator.next(), false);
                 iterator.remove();
             }
         }
@@ -337,8 +378,8 @@ public class ElevatorTask {
         }
 
         // 清空task
-        while (!task.isEmpty()) {
-            Shared.getShared().addPending(task.poll());
+        while (!buffer.isEmpty()) {
+            Shared.getShared().addPending(buffer.poll());
         }
 
         refreshTargetFloor();
@@ -363,10 +404,39 @@ public class ElevatorTask {
                 shadow.outTask.get(i).addAll(this.outTask.get(i));
             }
             // 深拷贝task缓存
-            shadow.task.addAll(this.task);
+            shadow.buffer.addAll(this.buffer);
             shadow.targetFloor.addAll(this.targetFloor);
         }
         return shadow;
+    }
+
+    public boolean isEnd() {
+        return endFlag;
+    }
+
+    void changeLimitedFloor() {
+        // 设置最高/最低楼层
+        switch (elevatorId / Config.SHAFT_NUM) {
+            case(0) : // 主轿厢
+                this.minFloor = 2; // 最低层为F2
+                break;
+            case(1) : // 副轿厢
+                this.maxFloor = 2; // 最高层为F2
+                break;
+            default:
+                DebugOutput.exception(
+                        "ElevatorTask :: changeLimitedFloor"
+                        + "illegal elevator id: "
+                        + elevatorId);
+                break;
+        }
+
+        doubleFlag = true;
+    }
+
+    void resetLimitedFloor() {
+        this.minFloor = Config.ELEVATOR_FLOOR_MIN;
+        this.maxFloor = Config.ELEVATOR_FLOOR_MAX;
     }
 
 }
