@@ -41,6 +41,12 @@ public class DebugOutput {
         }
     }
 
+    public static void dispatchTask(int eid, int shaftId) {
+        if (Config.DEBUG) {
+            System.out.println("Shaft " + shaftId + " schedule to id:" + eid);
+        }
+    }
+
     public static void elevatorEnd(int id) {
         if (Config.DEBUG) {
             System.out.println("elevator end " + id);

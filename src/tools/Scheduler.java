@@ -43,14 +43,14 @@ public class Scheduler implements Runnable {
     }
 
     private void dispatch(Request request) {
-        switch (request.getClass().getSimpleName()){
-            case("MaintRequest") :
-            case("UpdateRequest") :
-            case("RecycleRequest") :
+        switch (request.getClass().getSimpleName()) {
+            case ("MaintRequest"):
+            case ("UpdateRequest"):
+            case ("RecycleRequest"):
                 dispatchToShaft(request,
                         (getShaftId(request)));
                 break;
-            case("PersonRequest") :
+            case ("PersonRequest"):
                 dispatchPersonRequest((PersonRequest) request);
                 break;
             default:
@@ -70,69 +70,44 @@ public class Scheduler implements Runnable {
         return 0;
     }
 
-    private void dispatchToShaft(Request request,int elevatorId) {
+    private void dispatchToShaft(Request request, int elevatorId) {
         Shared.getShared()
                 .getShaft(elevatorId)
                 .addTask(request);
     }
 
     private void dispatchPersonRequest(PersonRequest request) {
-        int mode = 3;
+        int mode = 2;
         switch (mode) {
-            case(1) : {
-//        Elevator elevator = getBestElevator(request); // 影子电梯
-//        elevator.addTask(request);
-//        DebugOutput.dispatchTask(elevator.getId());
+            case (1): {
+                //        Elevator elevator = getBestElevator(request); // 影子电梯
+                //        elevator.addTask(request);
+                //        DebugOutput.dispatchTask(elevator.getId());
             }
+            break;
 
-            case(2) : { // 均匀分配
+            case (2): { // 均匀分配
                 Shared.getShared()
                         .getShaft(cnt)
                         .addTask(request);
                 cnt = (cnt) % Config.SHAFT_NUM + 1;
                 DebugOutput.dispatchTask(cnt);
-            } break;
+            }
+            break;
 
-            case(3) : { // 固定给1号电梯分配
+            case (3): { // 固定给1号电梯分配
                 Shared.getShared()
-                        .getShaft(1)
+                        .getShaft(6)
                         .addTask(request);
-                DebugOutput.dispatchTask(1);
-            } break;
+                DebugOutput.dispatchTask(6);
+            }
+            break;
 
+            default:
+                break;
         }
 
 
-
-
-
     }
-
-//    private Elevator getBestElevator(PersonRequest request) {
-//        Shared shared = Shared.getShared();
-//        Elevator elevator = null;
-//        int costTime = Integer.MAX_VALUE;
-//
-//        for (int id = 1; id <= Config.SHAFT_NUM; id++) {
-//            Elevator e = shared.getElevator(id);
-//            int time = e.newShadow()
-//                    .addTask(request)
-//                    .simulate(); // 模拟完成时间
-//            DebugOutput.simulate(id, time);
-//            if (time < costTime) {
-//                costTime = time;
-//                elevator = e;
-//                DebugOutput.simulateWin(id, time);
-//            }
-//        }
-//
-//        if (elevator == null) { // 避免出异常，此时均匀分配
-//            elevator = shared.getElevator(cnt);
-//            cnt = (cnt % Config.SHAFT_NUM) + 1;
-//        }
-//
-//        return elevator;
-//    }
-
 
 }

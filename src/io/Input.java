@@ -1,7 +1,6 @@
 package io;
 
 import com.oocourse.elevator3.ElevatorInput;
-import com.oocourse.elevator3.PersonRequest;
 import com.oocourse.elevator3.Request;
 import main.Shared;
 
@@ -26,9 +25,7 @@ public class Input implements Runnable {
                 }
 
                 shared.addPending(curRequest);
-                if(curRequest instanceof PersonRequest) {
-                    Shared.getShared().addRequest();
-                }
+                shared.addRequest();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

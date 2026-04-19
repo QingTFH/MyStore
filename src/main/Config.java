@@ -7,7 +7,7 @@ public class Config {
     public static final PersonRequest POISON
             = new PersonRequest("NONE","NONE",-1,-1);
 
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG = true;
     public static final int SHAFT_NUM = 6; // 电梯井数量
     public static final int ELEVATOR_INITIAL_POS = 1; // 电梯初始楼层
     public static final int ELEVATOR_FLOOR_MAX = 7; // 最高楼层

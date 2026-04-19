@@ -1,10 +1,12 @@
 package elevator;
 
-import com.oocourse.elevator3.MaintRequest;
 import com.oocourse.elevator3.PersonRequest;
+import com.oocourse.elevator3.RecycleRequest;
 import com.oocourse.elevator3.Request;
+import com.oocourse.elevator3.UpdateRequest;
 import io.DebugOutput;
 import main.Config;
+import main.Shared;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -72,7 +74,7 @@ public class Shaft implements Runnable {
         }
     }
 
-    private void endElevator(int i ) {
+    private void endElevator(int i) {
         if (i == MAIN) {
             mainElevator.addTask(Config.POISON);
         } else if (i == DEPUTY) {
@@ -94,17 +96,17 @@ public class Shaft implements Runnable {
         /* 依据任务类型, 调度所需功能 */
         switch (request.getClass().getSimpleName()) {
             case ("MaintRequest"):
-                mainElevator.setMaintain((MaintRequest) request);
+                mainElevator.addTask(request);
                 break;
             case ("UpdateRequest"):
                 try {
-                    setDouble();
+                    setDouble((UpdateRequest) request);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
                 break;
             case ("RecycleRequest"):
-                endDouble();
+                endDouble((RecycleRequest) request);
                 break;
             case ("PersonRequest"):
                 dispatch((PersonRequest) request);
@@ -117,7 +119,7 @@ public class Shaft implements Runnable {
 
     private void dispatch(PersonRequest request) {
         /* 根据任务需求，分配到指定电梯的三级盘子 */
-        if(!doubleFlag) { // 无需协作
+        if (!doubleFlag) { // 无需协作
             mainElevator.addTask(request);
             return;
         }
@@ -128,40 +130,78 @@ public class Shaft implements Runnable {
         boolean assignToMain = (fromFloor > 2)
                 || (fromFloor == 2 && toFloor > 2);
 
-        if(assignToMain) { // main
+        if (assignToMain) { // main
+            DebugOutput.dispatchTask(id);
             mainElevator.addTask(request);
         } else {
+            DebugOutput.dispatchTask(id + 6);
             deputyElevator.addTask(request);
         }
 
     }
 
-    private void setDouble() throws InterruptedException {
+    private void setDouble(UpdateRequest request) throws InterruptedException {
         /* 启动双轿厢模式 */
         DebugOutput.receiveUpdate(id);
 
-        // 轿厢改造
-        mainElevator.setAsMain();
-
-        // 启动副轿厢
-        deputyElevator.setAsDeputy();
-        startElevator(DEPUTY);
+        mainElevator.addTask(request);
+        deputyElevator.addTask(request);
+        waitUpdate();
 
         doubleFlag = true;
+        startElevator(DEPUTY);
+        Shared.getShared().finishRequest();
     }
 
-    private void endDouble() throws InterruptedException {
+    private final Object updateLock = new Object();
+    private boolean updateEnd = false;
+
+    private void waitUpdate() throws InterruptedException {
+        synchronized (updateLock) {
+            updateEnd = false;
+            while (!updateEnd) {
+                updateLock.wait();
+            }
+        }
+    }
+
+    public void updateEnd() {
+        synchronized (updateLock) {
+            updateEnd = true;
+            updateLock.notifyAll();
+        }
+    }
+
+    private void endDouble(RecycleRequest request) throws InterruptedException {
         /* 结束双轿厢模式 */
         DebugOutput.receiveRecycle(id);
 
-        // 副轿厢改造
-        deputyElevator.deputyOver();
+        mainElevator.addTask(request);
+        deputyElevator.addTask(request);
+        waitRecycle();
+
         endElevator(DEPUTY);
-
-        // 副轿厢结束
-        mainElevator.mainOver();
-
         doubleFlag = false;
+        Shared.getShared().finishRequest();
+    }
+
+    private final Object recycleLock = new Object();
+    private boolean recycleEnd = false;
+
+    private void waitRecycle() throws InterruptedException {
+        synchronized (recycleLock) {
+            recycleEnd = false;
+            while (!recycleEnd) {
+                recycleLock.wait();
+            }
+        }
+    }
+
+    public void recycleEnd() {
+        synchronized (recycleLock) {
+            recycleEnd = true;
+            recycleLock.notifyAll();
+        }
     }
 
     Object getFloorLock() {
