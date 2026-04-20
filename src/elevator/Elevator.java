@@ -400,18 +400,21 @@ public class Elevator implements Runnable {
 
         synchronized Direction decideNextDirection() {
             /* 根据当前楼层、当前方向和targetFloor, 确定下一次运行的方向 */
+            if (doubleFlag && curFloor == 2) {
+                if (isMain) {
+                    return Direction.UP;
+                }
+                return Direction.DOWN;
+            }
+
             Integer up = targetFloor.ceiling(curFloor + 1);
             Integer down = targetFloor.floor(curFloor - 1);
-
-            // 无目标：空闲
             if (up == null && down == null) {
                 return Direction.NULL;
             }
 
-            // 当前方向为空：确定一个方向
-            if (direction == Direction.NULL) {
-                if (up != null && down != null) {
-                    // 上下都有目标，选近的
+            if (direction == Direction.NULL) { // 当前方向为空：确定一个方向
+                if (up != null && down != null) { // 上下都有目标，选近的
                     return (up - curFloor) <= (curFloor - down) ? Direction.UP : Direction.DOWN;
                 } else if (up != null) {
                     return Direction.UP;
@@ -488,5 +491,4 @@ public class Elevator implements Runnable {
             }
         }
     }
-
 }
