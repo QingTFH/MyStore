@@ -112,12 +112,12 @@ public class Elevator implements Runnable {
         closeDoor();
         final int prevFloor = curFloor;
         Thread.sleep(moveCostTime);
-        if (doubleFlag && curFloor + (direction == Direction.UP ? 1 : -1) == 2) { // 需要进入F2, 释放锁在输出前
+        if (curFloor + (direction == Direction.UP ? 1 : -1) == 2) { // 需要进入F2, 释放锁在输出前
             lockSharedFloor();
         }
         curFloor = curFloor + (direction == Direction.UP ? 1 : -1);
         Output.printArrive(curFloor, id); // 先消耗时间，再到位
-        if (doubleFlag && prevFloor == 2) { // 需要离开F2, 释放锁在输出后
+        if (prevFloor == 2) { // 需要离开F2, 释放锁在输出后
             unlockSharedFloor();
         }
         if (curFloor == Config.ELEVATOR_FLOOR_MIN || curFloor == Config.ELEVATOR_FLOOR_MAX) {
